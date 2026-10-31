@@ -1447,7 +1447,11 @@ function peerOpts() {
   const [host, port] = h.split(":");
   return { host, port: Number(port) || 9000, path: "/", secure: location.protocol === "https:", debug: 0 };
 }
-function hostRoom(code, keepCode, tries = 0) {
+// hiccups talking to the room server (patchy wifi, phone waking up, busy server): worth another go
+const FLAKY = ["network", "server-error", "socket-error", "socket-closed", "disconnected"];
+const NO_SERVER = "Couldn't reach the room server. Check this phone's internet connection (try switching between wifi and mobile data), then try again.";
+const retryWait = n => new Promise(r => setTimeout(r, 1200 * (n + 1)));
+function hostRoom(code, keepCode, tries = 0, flaky = 0) {
   return loadPeer().then(P => new Promise((res, rej) => {
     let opened = false;
     const peer = new P(PREFIX + code, peerOpts());
@@ -1458,6 +1462,8 @@ function hostRoom(code, keepCode, tries = 0) {
         if (e.type === "unavailable-id" && !keepCode) hostRoom(newCode()).then(res, rej);
         else if (e.type === "unavailable-id" && tries < 6) setTimeout(() => hostRoom(code, true, tries + 1).then(res, rej), 3000);
         else if (e.type === "unavailable-id") rej(new Error("Room " + code + " is still in use. Try again in a minute, or start a new room."));
+        else if (FLAKY.includes(e.type) && flaky < 3) { U.net = "Still trying to open a room…"; render(); retryWait(flaky).then(() => hostRoom(code, true, tries, flaky + 1)).then(res, rej); }
+        else if (FLAKY.includes(e.type)) rej(new Error(NO_SERVER));
         else rej(new Error(e.type === "browser-incompatible" ? NO_RTC : "Couldn't open a room (" + (e.type || e.message) + ")."));
       }
     });
@@ -1497,17 +1503,25 @@ function hostRecv(conn, d) {
     Net.conns.delete(conn.pid); commit();
   }
 }
-function joinRoom(code, name) {
+function joinRoom(code, name, tries = 0) {
+  return joinOnce(code, name).catch(e => {
+    if (!e.flaky || tries >= 3) throw e;
+    if (!S) { U.net = `Still trying to reach room ${code}…`; render(); }
+    return retryWait(tries).then(() => joinRoom(code, name, tries + 1));
+  });
+}
+function joinOnce(code, name) {
   const pid = tabStore.get("earworm-pid-" + code) || uid();
   return loadPeer().then(P => new Promise((res, rej) => {
     let done = false;
     const peer = new P(peerOpts());
-    const fail = msg => { if (done) return; done = true; clearTimeout(timer); try { peer.destroy(); } catch (e) {} rej(new Error(msg)); };
+    const fail = (msg, flaky) => { if (done) return; done = true; clearTimeout(timer); try { peer.destroy(); } catch (e) {} const err = new Error(msg); err.flaky = !!flaky; rej(err); };
     const timer = setTimeout(() => fail("Couldn't reach room " + code + ". Is the host's screen still open?"), 15000);
     peer.on("error", e => {
       if (!done) fail(e.type === "peer-unavailable" ? "No room called " + code + ". Check the code, or ask the host to keep Earworm open."
-        : e.type === "browser-incompatible" ? NO_RTC : "Couldn't connect (" + (e.type || e.message) + ").");
+        : e.type === "browser-incompatible" ? NO_RTC : FLAKY.includes(e.type) ? NO_SERVER : "Couldn't connect (" + (e.type || e.message) + ").", FLAKY.includes(e.type));
     });
+    peer.on("disconnected", () => { if (!done) fail(NO_SERVER, true); });
     peer.on("open", () => {
       const conn = peer.connect(PREFIX + code, { reliable: true });
       conn.on("open", () => conn.send({ t: "join", pid, name }));
