@@ -1,0 +1,2201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Earworm &mdash; Name That Hit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0d0e16">
+<meta name="description" content="Earworm: name the hit from one second of music. Split Second and Timeline, with USA and K-pop decks, on one phone or with everyone on their own.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>">
+<style>
+  :root{
+    --ground:#0d0e16;
+    --panel:#171a2b;
+    --panel-2:#1f2438;
+    --line:rgba(255,255,255,.10);
+    --ink:#f4f5fb;
+    --ink-dim:#a7adc6;
+    --ink-faint:#6b7192;
+    --good:#25c281;
+    --miss:#ff6a5a;
+    --m-split:#ff4f7b;
+    --m-time:#2ee6c9;
+    --accent:#ffb000;
+    --accent-ink:#0d0e16;
+    --display:"Arial Black","Helvetica Neue Bold","Helvetica Neue",Helvetica,Arial,sans-serif;
+    --body:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    background:var(--ground);color:var(--ink);font-family:var(--body);
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body[data-mode="split"]{--accent:var(--m-split)}
+  body[data-mode="timeline"]{--accent:var(--m-time)}
+  button{font-family:inherit;cursor:pointer;border:0;color:inherit;background:none;font-size:inherit}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:14px}
+  input{font-family:inherit}
+
+  .app{max-width:540px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;
+    padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));position:relative}
+  .flood{position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(120% 70% at 50% -12%, color-mix(in srgb,var(--accent) 38%, transparent), transparent 70%),
+      linear-gradient(180deg, color-mix(in srgb,var(--accent) 9%, var(--ground)), var(--ground) 60%);
+    transition:background .4s ease}
+  .screen{flex:1;display:flex;flex-direction:column;gap:14px;animation:rise .28s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* type */
+  .display{font-family:var(--display);font-weight:900;text-transform:uppercase;letter-spacing:-.03em;line-height:.9}
+  .eyebrow{color:var(--ink-faint);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+  .dim{color:var(--ink-dim)}
+  .faint{color:var(--ink-faint)}
+  .center{text-align:center}
+  .small{font-size:13px}
+  h2{margin:0}
+
+  /* brand */
+  .brand{padding:10px 2px 4px}
+  .brand h1{font-family:var(--display);font-weight:900;margin:0;line-height:.86;font-size:clamp(48px,16.5vw,88px);letter-spacing:-.05em;text-transform:uppercase}
+  .brand h1 i{font-style:normal;color:var(--m-split)}
+  .brand .ko{font-size:15px;color:var(--ink-dim);margin-top:10px}
+  .brand .ko b{color:var(--ink);font-weight:700}
+
+  /* mode cards */
+  .modes{display:flex;flex-direction:column;gap:12px}
+  .mode{position:relative;overflow:hidden;border-radius:22px;padding:18px 18px 18px 22px;background:var(--panel);
+    border:1px solid var(--line);text-align:left;display:flex;flex-direction:column;gap:6px;
+    transition:transform .12s ease}
+  .mode:active{transform:scale(.98)}
+  .mode .swatch{position:absolute;inset:0 auto 0 0;width:7px;background:var(--mc)}
+  .mode .blob{position:absolute;top:-50px;right:-40px;width:150px;height:150px;border-radius:50%;background:var(--mc);opacity:.16;filter:blur(6px)}
+  .mode .name{font-family:var(--display);font-weight:900;font-size:30px;letter-spacing:-.03em;text-transform:uppercase;color:var(--mc);position:relative;line-height:1}
+  .mode .pitch{position:relative;color:var(--ink);font-size:15px;line-height:1.35}
+  .pill{font-size:11.5px;font-weight:700;letter-spacing:.04em;padding:4px 9px;border-radius:999px;background:var(--panel-2);color:var(--ink-dim);border:1px solid var(--line)}
+
+  /* buttons */
+  .cta{width:100%;padding:18px;border-radius:20px;background:var(--accent);color:var(--accent-ink);
+    font-family:var(--display);font-weight:900;font-size:19px;letter-spacing:.02em;text-transform:uppercase;
+    box-shadow:0 12px 30px -12px color-mix(in srgb,var(--accent) 75%,transparent);transition:transform .1s ease}
+  .cta:active{transform:translateY(2px) scale(.99)}
+  .cta.alt{background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .cta .sub{display:block;font-family:var(--body);font-weight:600;text-transform:none;letter-spacing:0;font-size:13px;opacity:.75;margin-top:4px}
+  .ghost{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink-dim);font-weight:700;font-size:13px}
+  .ghost:active{transform:scale(.96)}
+  .ghost.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .link{color:var(--accent);font-weight:700;font-size:14px;padding:6px 2px}
+  .row{display:flex;gap:10px;align-items:center}
+  .row.wrap{flex-wrap:wrap}
+  .grow{flex:1}
+  .stack{display:flex;flex-direction:column;gap:10px}
+  .bottom{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding-top:12px}
+  .topback{align-self:flex-start;color:var(--ink-dim);font-weight:700;font-size:14px;padding:6px 2px}
+
+  .seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px;gap:2px}
+  .seg button{padding:8px 13px;border-radius:999px;font-weight:700;font-size:14px;color:var(--ink-dim);font-variant-numeric:tabular-nums}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+  /* panels */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px}
+  .card.tint{background:color-mix(in srgb,var(--accent) 10%,var(--panel));border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+  .rules{margin:0;padding:0;list-style:none;counter-reset:r;display:flex;flex-direction:column;gap:12px}
+  .rules li{counter-increment:r;display:grid;grid-template-columns:30px 1fr;gap:10px;line-height:1.4;font-size:15px}
+  .rules li::before{content:counter(r);width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+    font-family:var(--display);font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center}
+
+  /* inputs */
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+  .inp{width:100%;padding:15px 16px;border-radius:16px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:17px}
+  .inp:focus{outline:none;border-color:var(--accent)}
+  .inp.code{font-family:var(--display);font-size:34px;letter-spacing:.3em;text-transform:uppercase;text-align:center;padding:12px}
+  .inp.big{font-family:var(--display);font-size:34px;text-align:center;padding:14px}
+  .err{color:var(--miss);font-size:14px;font-weight:600}
+
+  /* players */
+  .plist{display:flex;flex-direction:column;gap:8px}
+  .p{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);font-weight:700}
+  .p .dot{width:9px;height:9px;border-radius:50%;background:var(--good);flex:none}
+  .p .dot.off{background:var(--ink-faint)}
+  .p .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .p .you{color:var(--ink-faint);font-weight:600;font-size:12px}
+  .p .x{color:var(--ink-faint);font-size:20px;line-height:1;padding:0 4px}
+  .teambadge{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:5px 9px;border-radius:999px;border:1px solid var(--line)}
+  .t0{color:#ffb14a;background:rgba(255,177,74,.12)}
+  .t1{color:#6fd3ff;background:rgba(111,211,255,.12)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:10px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);font-weight:700;font-size:15px}
+  .chip.done{background:color-mix(in srgb,var(--good) 18%,var(--panel));border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+  .chip.pick{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+
+  /* game top bar */
+  .gtop{display:flex;align-items:center;gap:8px}
+  .mchip{font-family:var(--display);font-weight:900;text-transform:uppercase;font-size:15px;color:var(--accent);letter-spacing:-.01em}
+  .gtop .info{flex:1;color:var(--ink-dim);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .icon-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font-weight:900;color:var(--ink-dim);font-size:16px;flex:none}
+
+  /* prompt card */
+  .prompt{border-radius:24px;padding:22px 20px;background:var(--panel);border:1px solid var(--line);position:relative;overflow:hidden}
+  .prompt::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--accent)}
+  .prompt .t{font-family:var(--display);font-weight:900;text-transform:uppercase;font-size:clamp(26px,8vw,38px);line-height:.98;letter-spacing:-.025em;text-wrap:balance}
+  .prompt .q{font-size:clamp(21px,6vw,27px);font-weight:800;line-height:1.2;text-wrap:balance}
+  .scale{display:flex;justify-content:space-between;gap:12px;margin-top:14px;font-size:13.5px;font-weight:700}
+  .scale span{display:flex;align-items:center;gap:6px}
+  .scale b{font-family:var(--display);font-size:18px;color:var(--accent)}
+  .scale span:last-child{text-align:right}
+
+  .hint{margin:0;color:var(--ink-dim);font-size:15px;line-height:1.45}
+  .hint b{color:var(--ink)}
+  .scores{display:flex;gap:8px}
+  .sc-pill{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;font-weight:800;font-size:13px;border:1.5px solid transparent}
+  .sc-pill .tn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sc-pill b{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .sc-pill.act{border-color:currentColor}
+  .wait{display:flex;align-items:center;gap:10px;justify-content:center;color:var(--ink-dim);font-weight:700;font-size:15px;padding:14px;text-align:center}
+  .wait::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse 1.1s ease-in-out infinite;flex:none}
+  @keyframes pulse{50%{opacity:.25;transform:scale(.7)}}
+
+  /* hold to peek */
+  /* tap to reveal a secret */
+  .peek{position:relative;border-radius:24px;min-height:180px;width:100%;background:color-mix(in srgb,var(--accent) 14%,var(--panel));
+    border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;overflow:hidden;
+    box-shadow:0 12px 30px -16px color-mix(in srgb,var(--accent) 80%,transparent)}
+  .peek:active{transform:scale(.99)}
+  .peek .cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--accent)}
+  .peek .cover svg{width:44px;height:44px}
+  .peek .cover b{font-family:var(--display);text-transform:uppercase;font-size:20px;letter-spacing:.01em}
+  .peek .secret{display:none;flex-direction:column;align-items:center;gap:2px}
+  .peek .secret .num{font-family:var(--display);font-weight:900;font-size:120px;line-height:1;color:var(--accent)}
+  .peek .secret small{color:var(--ink-dim);font-size:13px;font-weight:700}
+  .peek.on .cover{display:none}
+  .peek.on .secret{display:flex}
+  .peek.on{background:var(--panel)}
+
+  /* captain + theme scale */
+  .capbar{display:flex;align-items:center;gap:12px}
+  .capbar .crown{font-size:34px;line-height:1}
+  .capname{font-family:var(--display);font-weight:900;text-transform:uppercase;font-size:clamp(28px,9vw,40px);line-height:.95;letter-spacing:-.02em;color:var(--accent);word-break:break-word}
+  .scale2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+  .scale2 div{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--panel-2);font-weight:800;font-size:15px;line-height:1.15}
+  .scale2 div:last-child{justify-content:flex-end;text-align:right}
+  .scale2 b{font-family:var(--display);font-size:30px;color:var(--accent);line-height:1}
+
+  /* drag to reorder */
+  .sortable .slot{touch-action:pan-y;will-change:transform}
+  .sortable .slot.lift{position:relative;z-index:2;box-shadow:0 14px 30px -10px rgba(0,0,0,.7);border-color:var(--accent);transition:none!important}
+  .sortable .slot.shift{transition:transform .15s ease}
+  .grip{margin-left:auto;display:flex;align-items:center;justify-content:center;width:44px;height:40px;margin-right:-6px;border-radius:10px;color:var(--ink-dim);touch-action:none;cursor:grab}
+  .grip:active{cursor:grabbing;color:var(--accent)}
+  .gripglyph{font-weight:900;color:var(--accent)}
+  .handoff{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:10px 0}
+  .handoff .to{font-family:var(--display);font-weight:900;text-transform:uppercase;font-size:clamp(40px,13vw,64px);line-height:.9;letter-spacing:-.03em;color:var(--accent);word-break:break-word}
+  .handoff .lbl{color:var(--ink-dim);font-size:15px}
+  .handoff .warn{font-size:14px;color:var(--ink-faint);max-width:30ch;line-height:1.4}
+
+  /* ordering / line */
+  .order{display:flex;flex-direction:column;gap:6px}
+  .slot{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);font-weight:700;font-size:16px}
+  button.slot{width:100%;text-align:left}
+  .slot .n{font-family:var(--display);width:30px;text-align:center;color:var(--ink-faint);font-size:15px;flex:none}
+  .slot .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .slot .val{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums}
+  .slot.ok{border-color:color-mix(in srgb,var(--good) 60%,transparent);background:color-mix(in srgb,var(--good) 12%,var(--panel))}
+  .slot.bad{border-color:color-mix(in srgb,var(--miss) 60%,transparent);background:color-mix(in srgb,var(--miss) 12%,var(--panel))}
+  .slot.hid .val{color:var(--ink-faint)}
+  .slot.me{outline:2px solid var(--accent);outline-offset:-2px}
+  .end{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);font-weight:800;text-align:center;padding:2px}
+  .gap{border:2px dashed color-mix(in srgb,var(--accent) 60%,transparent);color:var(--accent);border-radius:14px;padding:9px;font-weight:800;font-size:14px;
+    background:color-mix(in srgb,var(--accent) 7%,transparent)}
+  .gap:active{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+
+  /* hearts / score */
+  .banner{border-radius:20px;padding:16px;text-align:center;font-weight:800;font-size:17px}
+  .banner.good{background:color-mix(in srgb,var(--good) 16%,var(--panel));color:var(--good)}
+  .banner.bad{background:color-mix(in srgb,var(--miss) 14%,var(--panel));color:var(--miss)}
+  .banner.neutral{background:var(--panel);color:var(--ink)}
+  .banner .big{display:block;font-family:var(--display);font-size:38px;line-height:1;margin-bottom:4px;text-transform:uppercase;letter-spacing:-.02em}
+
+
+  /* dial */
+  .dialwrap{position:relative;user-select:none;-webkit-user-select:none}
+  .dial{width:100%;height:auto;display:block;touch-action:none}
+  .dial.drag{cursor:grab}
+  .spec{display:flex;justify-content:space-between;gap:10px;margin-top:-4px}
+  .spec div{flex:1;font-family:var(--display);text-transform:uppercase;font-size:clamp(16px,5vw,22px);line-height:1;letter-spacing:-.01em;padding:10px 12px;border-radius:14px}
+  .spec .l{background:rgba(111,211,255,.14);color:#8fdcff}
+  .spec .r{background:rgba(255,120,90,.14);color:#ff9b82;text-align:right}
+
+  /* sheet */
+  .sheet{position:fixed;inset:0;background:rgba(5,6,12,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:30;display:flex;align-items:flex-end;justify-content:center;animation:fade .2s ease both}
+  .sheet .in{width:100%;max-width:540px;max-height:88dvh;overflow:auto;background:var(--ground);border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;padding:20px 18px max(22px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px;animation:up .25s ease both}
+  @keyframes fade{from{opacity:0}}
+  @keyframes up{from{transform:translateY(30px)}}
+  .toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:11px 18px;border-radius:999px;font-weight:700;font-size:14px;z-index:40;animation:rise .2s ease both;max-width:90vw;text-align:center}
+  .netbar{background:color-mix(in srgb,var(--miss) 18%,var(--panel));color:var(--ink);border:1px solid color-mix(in srgb,var(--miss) 45%,transparent);border-radius:14px;padding:10px 12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px}
+
+  .confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
+  .room-code{font-family:var(--display);font-size:clamp(54px,18vw,80px);letter-spacing:.14em;line-height:1;color:var(--accent);text-align:center}
+  hr.sep{border:0;border-top:1px solid var(--line);margin:4px 0;width:100%}
+
+  /* ---------- Earworm ---------- */
+  .scores{flex-wrap:wrap}
+  .sc-pill{background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);flex:1 1 30%}
+  .sc-pill.act{color:var(--accent);border-color:var(--accent)}
+  .stage{display:flex;gap:6px;justify-content:center}
+  .stage span{flex:1;max-width:96px;text-align:center;padding:7px 0;border-radius:999px;background:var(--panel);border:1px solid var(--line);
+    font-family:var(--display);font-size:13px;color:var(--ink-faint);letter-spacing:.02em}
+  .stage span.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .stage span.past{color:var(--ink-dim)}
+  .player{display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0 4px}
+  .playbtn{width:min(54vw,210px);aspect-ratio:1;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:2px;box-shadow:0 18px 50px -14px color-mix(in srgb,var(--accent) 80%,transparent),inset 0 0 0 10px rgba(0,0,0,.08);
+    transition:transform .1s ease;position:relative}
+  .playbtn:active{transform:scale(.97)}
+  .playbtn .ic{font-size:44px;line-height:1}
+  .playbtn b{font-family:var(--display);font-size:26px;text-transform:uppercase;letter-spacing:-.02em;line-height:1}
+  .playbtn small{font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+  .playbtn.busy{background:var(--panel-2);color:var(--ink-dim);box-shadow:none}
+  .eq{display:flex;gap:5px;align-items:flex-end;height:44px}
+  .eq i{width:8px;border-radius:4px;background:currentColor;animation:eq .5s ease-in-out infinite alternate}
+  .eq i:nth-child(2){animation-delay:-.2s}.eq i:nth-child(3){animation-delay:-.35s}.eq i:nth-child(4){animation-delay:-.1s}
+  @keyframes eq{from{height:8px}to{height:44px}}
+  .gform{display:flex;flex-direction:column;gap:8px}
+  .gform .row .inp{min-width:0}
+  .inp.yr{max-width:110px;text-align:center;font-variant-numeric:tabular-nums}
+  .songcard{display:flex;gap:14px;align-items:center;padding:14px;border-radius:22px;background:var(--panel);border:1px solid var(--line);position:relative;overflow:hidden}
+  .songcard::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--accent)}
+  .songcard .art{width:88px;height:88px;border-radius:14px;flex:none;background:var(--panel-2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:34px}
+  .songcard .tt{font-family:var(--display);font-weight:900;text-transform:uppercase;font-size:clamp(20px,6vw,26px);line-height:1;letter-spacing:-.02em;overflow-wrap:anywhere}
+  .songcard .ar{font-weight:800;font-size:16px;margin-top:6px;color:var(--ink)}
+  .songcard .yr{font-family:var(--display);font-size:22px;color:var(--accent);margin-top:4px}
+  .res{display:flex;flex-direction:column;gap:8px}
+  .res .rw{padding:10px 12px;border-radius:16px;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+  .res .hd{display:flex;align-items:center;gap:10px;font-weight:800}
+  .res .hd .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .res .hd .at{font-size:12px;color:var(--ink-faint);font-weight:700}
+  .res .hd b{font-family:var(--display);font-size:22px;color:var(--accent);font-variant-numeric:tabular-nums}
+  .mks{display:flex;flex-wrap:wrap;gap:6px}
+  .mk{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:13.5px;font-weight:700;max-width:100%;
+    background:color-mix(in srgb,var(--miss) 12%,var(--panel-2));color:var(--ink-dim);border:1px solid color-mix(in srgb,var(--miss) 35%,transparent)}
+  .mk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .mk.ok{background:color-mix(in srgb,var(--good) 16%,var(--panel-2));color:var(--ink);border-color:color-mix(in srgb,var(--good) 45%,transparent)}
+  .mk.half{background:color-mix(in srgb,var(--m-time) 12%,var(--panel-2));color:var(--ink);border-color:color-mix(in srgb,var(--m-time) 40%,transparent)}
+  .mk.none{background:var(--panel-2);border-color:var(--line);color:var(--ink-faint)}
+  button.mk{cursor:pointer}
+  .stand{display:flex;flex-direction:column;gap:6px}
+  .stand .slot .n{color:var(--accent)}
+  .tl .slot .val{font-size:18px;color:var(--accent)}
+  .tl .slot .nm small{display:block;color:var(--ink-faint);font-size:12.5px;font-weight:700}
+  .tl .slot.new{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel))}
+  .tokens{color:#ffd34d}
+  .fixrow{display:grid;grid-template-columns:62px 1fr auto;gap:8px;align-items:center}
+  .fixrow .tm{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;text-align:center}
+  .fixrow .btns{display:flex;gap:4px}
+  .fixrow .btns .ghost{padding:8px 9px;font-size:13px}
+  .note{font-size:13.5px;line-height:1.45;color:var(--ink-dim)}
+  .linkrow{display:flex;justify-content:center;gap:18px;flex-wrap:wrap}
+  /* the YouTube player lives outside the app so re-renders never reload it; it sits off screen except for the one-time sound check */
+  #ytbox{position:fixed;left:-10000px;top:0;width:320px;z-index:40}
+  #ytbox.on{left:0;right:0;width:auto;inset:0;background:rgba(5,6,12,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;padding:20px}
+  #ytbox .in{width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px;text-align:center}
+  #ytbox .hd,#ytbox .sub{display:none}
+  #ytbox.on .hd{display:block;font-family:var(--display);font-weight:900;text-transform:uppercase;font-size:30px;line-height:.95;letter-spacing:-.02em}
+  #ytbox.on .sub{display:block;color:var(--ink-dim);font-size:15px;line-height:1.4}
+  #ytbox .frame{position:relative;width:320px;height:180px;margin:0 auto;border-radius:18px;overflow:hidden}
+  #ytbox .frame iframe{width:320px;height:180px;display:block;border:0}
+  #ytbox .cover{position:absolute;inset:0;pointer-events:none;background:var(--accent);color:var(--accent-ink);display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:6px;font-family:var(--display);font-size:24px;text-transform:uppercase}
+  #ytbox.on .cover{display:flex}
+  #ytbox .cover span{font-size:46px}
+</style>
+</head>
+<body>
+<div class="flood"></div>
+<main class="app" id="app"></main>
+<div id="layer"></div>
+<div id="ytbox" aria-hidden="false"><div class="in">
+  <div class="hd">Switch on the sound</div>
+  <div class="sub">Phones need one tap on the music player before they'll play anything. Tap the box once and you're set for the whole game.</div>
+  <div class="frame"><div id="ytp"></div><div class="cover"><span>🔊</span>Tap here</div></div>
+  <button class="link sub" data-a="unlock">Already hearing sound? Skip this</button>
+</div></div>
+<script>
+/* ---------- DECKS ----------
+   One song per line:  Title|Artist|Year|YouTube id|clip starts
+   - Title: other accepted spellings after ";"   (Gee;지)
+   - Artist: other accepted names after ";"; artists credited together are joined with " + "
+     (each of them counts as a right answer on its own)
+   - Year: the year it was a hit in the US (K-pop: the release year)
+   - YouTube id: optional. Songs without one need a YouTube API key in Settings, which finds the video.
+   - Clip starts: optional seconds for the 1, 2 and 3 second clips, e.g. 62,121,18.
+     Leave empty to use the song's shape (chorus about a third of the way in).          */
+const DECK = {};
+DECK.usa = `Hey Jude|The Beatles;Beatles|1968|A_MjCqQoLLA
+Let It Be|The Beatles;Beatles|1970|QDYfEBY9NM4
+Here Comes the Sun|The Beatles;Beatles|1969|KQetemT1sWc
+I Want to Hold Your Hand|The Beatles;Beatles|1964|
+(I Can't Get No) Satisfaction;Satisfaction;I Can't Get No Satisfaction|The Rolling Stones;Rolling Stones;The Stones|1965|
+My Girl|The Temptations|1965|
+Respect|Aretha Franklin|1967|
+Ain't No Mountain High Enough|Marvin Gaye + Tammi Terrell|1967|
+I Heard It Through the Grapevine|Marvin Gaye|1968|
+Good Vibrations|The Beach Boys;Beach Boys|1966|
+Stand by Me|Ben E. King;Ben E King|1961|
+The Sound of Silence;Sound of Silence;The Sounds of Silence|Simon & Garfunkel|1965|
+Mrs. Robinson;Mrs Robinson|Simon & Garfunkel|1968|
+Sugar, Sugar;Sugar Sugar|The Archies;Archies|1969|
+Can't Help Falling in Love|Elvis Presley;Elvis|1961|
+Suspicious Minds|Elvis Presley;Elvis|1969|
+I Got You Babe|Sonny & Cher|1965|
+Brown Eyed Girl|Van Morrison|1967|
+Proud Mary|Creedence Clearwater Revival;CCR|1969|
+Born to Be Wild|Steppenwolf|1968|
+Light My Fire|The Doors;Doors|1967|
+California Dreamin';California Dreaming|The Mamas & the Papas;The Mamas and the Papas|1966|
+Stop! In the Name of Love;Stop in the Name of Love|The Supremes;Diana Ross & the Supremes;Supremes|1965|
+(Sittin' On) The Dock of the Bay;Dock of the Bay;Sittin On the Dock of the Bay|Otis Redding|1968|
+I'm a Believer|The Monkees;Monkees|1966|
+Oh, Pretty Woman;Pretty Woman|Roy Orbison|1964|
+Build Me Up Buttercup|The Foundations;Foundations|1968|
+Bohemian Rhapsody|Queen|1975|fJ9rUzIMcZQ
+Don't Stop Me Now|Queen|1979|HgzGwKwLmgM
+Another One Bites the Dust|Queen|1980|rY0WxgSXdEE
+We Will Rock You|Queen|1977|-tJYN-eG1zk
+Dancing Queen|ABBA|1976|xFrGuyw1V8s
+Stayin' Alive;Staying Alive|Bee Gees;The Bee Gees|1977|I_izvAbhExY
+Night Fever|Bee Gees;The Bee Gees|1978|
+Y.M.C.A.;YMCA|Village People;The Village People|1978|CS9OO0S5w2k
+September|Earth, Wind & Fire|1978|Gs069dndIYk
+I Will Survive|Gloria Gaynor|1978|
+Hotel California|Eagles;The Eagles|1977|
+Dreams|Fleetwood Mac|1977|
+Go Your Own Way|Fleetwood Mac|1977|
+Superstition|Stevie Wonder|1972|
+Sir Duke|Stevie Wonder|1977|
+Le Freak|Chic|1978|
+Imagine|John Lennon|1971|
+American Pie|Don McLean|1971|
+Sweet Home Alabama|Lynyrd Skynyrd|1974|
+Born to Run|Bruce Springsteen;Springsteen|1975|
+Piano Man|Billy Joel|1973|
+Tiny Dancer|Elton John|1971|
+Rocket Man|Elton John|1972|
+Crocodile Rock|Elton John|1972|
+Lean on Me|Bill Withers|1972|
+Ain't No Sunshine|Bill Withers|1971|
+Let's Stay Together|Al Green|1971|
+Kung Fu Fighting|Carl Douglas|1974|
+Hot Stuff|Donna Summer|1979|
+Take Me Home, Country Roads;Country Roads;Take Me Home Country Roads|John Denver|1971|
+More Than a Feeling|Boston|1976|
+Dream On|Aerosmith|1973|
+Heart of Glass|Blondie|1979|
+My Sharona|The Knack;Knack|1979|
+Billie Jean|Michael Jackson|1983|Zi_XLOBDo_Y
+Beat It|Michael Jackson|1983|oRdxUFDoQe0
+Take On Me|a-ha;aha|1985|djV11Xbc914
+Never Gonna Give You Up|Rick Astley|1987|dQw4w9WgXcQ
+Africa|Toto|1982|FTQbiNvZqaY
+Don't Stop Believin';Don't Stop Believing|Journey|1981|1k8craCGpgs
+Eye of the Tiger|Survivor|1982|btPJPFnesV4
+Livin' on a Prayer;Living on a Prayer|Bon Jovi|1986|lDK9QqIzhwk
+Sweet Child O' Mine;Sweet Child of Mine|Guns N' Roses;Guns and Roses;GNR|1988|1w7OgIMMRc4
+I Wanna Dance with Somebody (Who Loves Me);I Wanna Dance with Somebody;I Want to Dance with Somebody|Whitney Houston;Whitney|1987|eH3giaIzONA
+Girls Just Want to Have Fun|Cyndi Lauper|1983|PIb6AZdTr-A
+Like a Prayer|Madonna|1989|79fzeNUqQbQ
+Like a Virgin|Madonna|1984|
+Material Girl|Madonna|1985|
+When Doves Cry|Prince|1984|
+Everybody Wants to Rule the World|Tears for Fears|1985|aGCdLKXNF3w
+The Final Countdown;Final Countdown|Europe|1986|9jK-NcRmVcw
+Total Eclipse of the Heart|Bonnie Tyler|1983|lcOxhH8N3Bo
+Wake Me Up Before You Go-Go;Wake Me Up Before You Go Go|Wham!;Wham|1984|pIgZ7gMze7A
+Careless Whisper|George Michael;Wham!;Wham|1984|
+Footloose|Kenny Loggins|1984|
+Ghostbusters|Ray Parker Jr.;Ray Parker Jr;Ray Parker Junior|1984|
+Jump|Van Halen|1984|
+Born in the U.S.A.;Born in the USA|Bruce Springsteen;Springsteen|1984|
+Dancing in the Dark|Bruce Springsteen;Springsteen|1984|
+Walk Like an Egyptian|The Bangles;Bangles|1986|
+Faith|George Michael|1987|
+Here I Go Again|Whitesnake|1987|
+Pour Some Sugar on Me|Def Leppard|1987|
+Every Breath You Take|The Police;Police;Sting|1983|
+Don't You (Forget About Me);Don't You Forget About Me|Simple Minds|1985|
+Take My Breath Away|Berlin|1986|
+Danger Zone|Kenny Loggins|1986|
+I Love Rock 'n' Roll;I Love Rock and Roll;I Love Rock n Roll|Joan Jett & the Blackhearts;Joan Jett|1982|
+Physical|Olivia Newton-John;Olivia Newton John|1981|
+Celebration|Kool & the Gang;Kool and the Gang|1980|
+Call Me|Blondie|1980|
+Another Brick in the Wall|Pink Floyd|1980|
+Tainted Love|Soft Cell|1982|
+Come On Eileen|Dexys Midnight Runners;Dexys|1983|
+Karma Chameleon|Culture Club;Boy George|1984|
+Super Freak|Rick James|1981|
+Push It|Salt-N-Pepa;Salt n Pepa|1988|
+Don't Worry, Be Happy;Don't Worry Be Happy|Bobby McFerrin|1988|
+Free Fallin';Free Falling|Tom Petty|1989|
+Love Shack|The B-52's;B-52's;B52s|1989|
+Straight Up|Paula Abdul|1989|
+Need You Tonight|INXS|1988|
+Smells Like Teen Spirit|Nirvana|1991|hTWKbfoikeg
+Vogue|Madonna|1990|GuJQSAiODqI
+I Will Always Love You|Whitney Houston;Whitney|1992|3JWTaaS7LdU
+All I Want for Christmas Is You|Mariah Carey;Mariah|1994|yXQViqx6GMY
+Hero|Mariah Carey;Mariah|1993|
+Fantasy|Mariah Carey;Mariah|1995|
+...Baby One More Time;Baby One More Time;Hit Me Baby One More Time|Britney Spears;Britney|1998|C-u5WLJ9Yk4
+Wannabe|Spice Girls;The Spice Girls|1997|gJLIiF15wjQ
+I Want It That Way|Backstreet Boys;BSB;The Backstreet Boys|1999|4fndeDfaWCg
+Everybody (Backstreet's Back);Everybody;Backstreet's Back|Backstreet Boys;BSB;The Backstreet Boys|1997|6M6samPEMpM
+Genie in a Bottle|Christina Aguilera|1999|kIDWgqDBNXA
+Livin' la Vida Loca;Living la Vida Loca|Ricky Martin|1999|p47fEXGabaY
+Smooth|Santana + Rob Thomas|1999|6Whgn_iE5uc
+Waterfalls|TLC|1995|8WEtxJ4-sh4
+No Scrubs|TLC|1999|FrLequ6dUdM
+Creep|TLC|1994|
+Gangsta's Paradise;Gangstas Paradise|Coolio + L.V.|1995|fPO76Jlnz6c
+Ironic|Alanis Morissette;Alanis|1996|Jne9t8sHpUc
+MMMBop;Mmm Bop|Hanson|1997|NHozn0YXAeE
+Wonderwall|Oasis|1995|bx1Bh8ZvH84
+Ice Ice Baby|Vanilla Ice|1990|
+U Can't Touch This;You Can't Touch This|MC Hammer;Hammer|1990|
+Jump|Kris Kross|1992|
+Baby Got Back|Sir Mix-a-Lot;Sir Mix a Lot|1992|
+Whoomp! (There It Is);Whoomp There It Is|Tag Team|1993|
+Macarena|Los del Río;Los del Rio|1996|
+Torn|Natalie Imbruglia|1998|
+My Heart Will Go On|Celine Dion;Céline Dion|1998|
+Truly Madly Deeply|Savage Garden|1998|
+I'll Be Missing You|Puff Daddy + Faith Evans + 112;Diddy;P. Diddy|1997|
+Losing My Religion|R.E.M.;REM|1991|
+Under the Bridge|Red Hot Chili Peppers;RHCP;Chili Peppers|1992|
+Enter Sandman|Metallica|1991|
+Semi-Charmed Life|Third Eye Blind;3 Eyed Blind|1997|
+Iris|Goo Goo Dolls;The Goo Goo Dolls|1998|
+Bitter Sweet Symphony;Bittersweet Symphony|The Verve;Verve|1997|
+Mambo No. 5;Mambo Number 5;Mambo No 5|Lou Bega|1999|
+Blue (Da Ba Dee);Blue;Blue Da Ba Dee|Eiffel 65|1999|
+Barbie Girl|Aqua|1997|
+What Is Love|Haddaway|1993|
+No Diggity|Blackstreet + Dr. Dre|1996|
+Kiss from a Rose|Seal|1995|
+Believe|Cher|1998|
+Zombie|The Cranberries;Cranberries|1994|
+Basket Case|Green Day|1994|
+All Star|Smash Mouth|1999|
+Say My Name|Destiny's Child;Destinys Child|2000|sQgd6MccwZc
+Bye Bye Bye|NSYNC;*NSYNC;N Sync|2000|Eo-KmOd3i7s
+Oops!... I Did It Again;Oops I Did It Again|Britney Spears;Britney|2000|
+Toxic|Britney Spears;Britney|2004|LOZuxwVk7TU
+Yellow|Coldplay|2000|yKNxeF4KMsY
+Clocks|Coldplay|2003|
+Viva la Vida|Coldplay|2008|dvgZkm1xWPE
+In the End|Linkin Park|2001|eVTXPUF4Oz4
+Numb|Linkin Park|2003|kXYiU_JCYtU
+Lose Yourself|Eminem|2002|_Yhyp-_hX2s
+Without Me|Eminem|2002|YVkUvmDQ3HY
+Hey Ya!;Hey Ya|OutKast;Outkast|2003|PWgvGjAhvIw
+Crazy in Love|Beyoncé + Jay-Z;Beyonce|2003|ViwtNLUqkMY
+Irreplaceable|Beyoncé;Beyonce|2006|
+Single Ladies (Put a Ring on It);Single Ladies;Put a Ring on It|Beyoncé;Beyonce|2008|4m1EFMoRFvY
+Halo|Beyoncé;Beyonce|2009|bnVUHWCynig
+Umbrella|Rihanna + Jay-Z|2007|CvBfHwUxHIk
+Pon de Replay|Rihanna|2005|
+Disturbia|Rihanna|2008|
+Bad Romance|Lady Gaga;Gaga|2009|qrO4YZeyl0I
+Poker Face|Lady Gaga;Gaga|2008|bESGLojNYSo
+Just Dance|Lady Gaga + Colby O'Donis;Gaga|2008|2Abk1jAONjw
+I Gotta Feeling|The Black Eyed Peas;Black Eyed Peas;BEP|2009|uSD4vsh1zDA
+Where Is the Love?;Where Is the Love|The Black Eyed Peas;Black Eyed Peas;BEP|2003|WpYeekQkAdc
+Yeah!;Yeah|Usher + Lil Jon + Ludacris|2004|GxBSyx85Kp8
+Mr. Brightside;Mr Brightside|The Killers;Killers|2004|gGdGFtwCNBE
+Since U Been Gone;Since You Been Gone|Kelly Clarkson|2004|R7UrFYvl5TE
+Complicated|Avril Lavigne;Avril|2002|5NPBIwQyPWE
+Sk8er Boi;Skater Boy;Sk8er Boy|Avril Lavigne;Avril|2002|TIy3n2b7V9k
+Girlfriend|Avril Lavigne;Avril|2007|Bg59q4puhmg
+Promiscuous|Nelly Furtado + Timbaland|2006|0J3vgcE5i2o
+Hollaback Girl|Gwen Stefani|2005|Kgjkth6BRRY
+Don't Cha;Dont Cha|The Pussycat Dolls;Pussycat Dolls|2005|YNSxNsr4wmA
+Stronger|Kanye West;Kanye;Ye|2007|PsO6ZnUZI0g
+Gold Digger|Kanye West + Jamie Foxx;Kanye;Ye|2005|6vwNcNOTVzY
+Empire State of Mind|Jay-Z + Alicia Keys;Jay Z|2009|0UjsXo9l6I8
+In da Club;In the Club|50 Cent;Fifty Cent|2003|5qm8PH4xAss
+Hot in Herre;Hot in Here|Nelly|2002|GeZZr_p6vB8
+Low|Flo Rida + T-Pain|2008|U2waT9TxPU0
+TiK ToK;Tik Tok|Kesha;Ke$ha|2009|iP6XpLQM2Cs
+I Kissed a Girl|Katy Perry|2008|tAp9BKosZXs
+Hot n Cold;Hot and Cold|Katy Perry|2008|
+Party in the U.S.A.;Party in the USA|Miley Cyrus;Miley|2009|M11SvDtPBhA
+Love Story|Taylor Swift;Taylor|2008|8xg3vE8Ie_E
+You Belong with Me|Taylor Swift;Taylor|2009|VuNIsY6JdUw
+SexyBack;Sexy Back|Justin Timberlake + Timbaland;JT|2006|3gOHvDP_vCs
+Cry Me a River|Justin Timberlake;JT|2002|DksSPZTZES0
+Hips Don't Lie|Shakira + Wyclef Jean|2006|DUT5rEU6pqM
+Boulevard of Broken Dreams|Green Day|2004|Soa3gO7tL-c
+Californication|Red Hot Chili Peppers;RHCP;Chili Peppers|2000|YlUKcNNmywk
+Bring Me to Life|Evanescence|2003|3YxaaGgTQYM
+This Love|Maroon 5|2004|XPpTgCho5ZA
+I'm Yours|Jason Mraz|2008|EkHTsc9PU2A
+You're Beautiful|James Blunt|2006|oofSnsGkops
+Fireflies|Owl City|2009|psuRGfAaju4
+We Belong Together|Mariah Carey;Mariah|2005|0habxsuXW4g
+Crazy|Gnarls Barkley|2006|
+Hey There Delilah|Plain White T's;Plain White Ts|2007|
+Apologize|Timbaland + OneRepublic;One Republic|2007|
+Bleeding Love|Leona Lewis|2008|
+Fallin'|Alicia Keys|2001|
+No One|Alicia Keys|2007|
+Lady Marmalade|Christina Aguilera + Lil' Kim + Mýa + P!nk;Pink;Mya|2001|
+Get the Party Started|P!nk;Pink|2001|
+Beautiful|Christina Aguilera|2002|
+Rehab|Amy Winehouse|2007|
+Seven Nation Army|The White Stripes;White Stripes|2003|
+Chasing Cars|Snow Patrol|2006|
+Love Song|Sara Bareilles|2007|
+Bubbly|Colbie Caillat|2007|
+Big Girls Don't Cry|Fergie|2007|
+Hey, Soul Sister;Hey Soul Sister|Train|2010|kVpv8-5XWOI
+Baby|Justin Bieber + Ludacris;Bieber|2010|kffacxfA7G4
+Just the Way You Are|Bruno Mars|2010|LjhCEhWiKXk
+Grenade|Bruno Mars|2010|
+Locked Out of Heaven|Bruno Mars|2012|e-fA-gBCkj0
+Treasure|Bruno Mars|2013|
+Uptown Funk|Mark Ronson + Bruno Mars|2014|OPf0YbXqDm0
+24K Magic|Bruno Mars|2016|UqyT8IEBkvY
+That's What I Like|Bruno Mars|2017|PMivT7MJ41M
+Rolling in the Deep|Adele|2011|rYEDA3JcQqw
+Someone Like You|Adele|2011|
+Hello|Adele|2015|YQHsXMglC9A
+Easy on Me|Adele|2021|
+Firework|Katy Perry|2010|QGJuMBdaqIw
+California Gurls;California Girls|Katy Perry + Snoop Dogg|2010|F57P9C4SAW4
+Teenage Dream|Katy Perry|2010|98WtmW-lfeE
+Roar|Katy Perry|2013|CevxZvSJLk8
+Dark Horse|Katy Perry + Juicy J|2013|0KSOMA3QBU0
+Party Rock Anthem|LMFAO + Lauren Bennett + GoonRock|2011|KQ6zr6kCPj8
+Call Me Maybe|Carly Rae Jepsen|2012|fWNaR-rxAic
+Somebody That I Used to Know|Gotye + Kimbra|2012|8UVNT4wvIGY
+We Found Love|Rihanna + Calvin Harris|2011|tg00YEETFzg
+Diamonds|Rihanna|2012|lWA2pjMjpBs
+Work|Rihanna + Drake|2016|HL1UzIK-flA
+Moves Like Jagger|Maroon 5 + Christina Aguilera|2011|iEPTlhBmwRg
+Payphone|Maroon 5 + Wiz Khalifa|2012|KRaWnd3LJfs
+Sugar|Maroon 5|2015|09R8_2nJtjg
+Girls Like You|Maroon 5 + Cardi B|2018|aJOTlE1K90k
+Memories|Maroon 5|2019|SlPhMPnQ58k
+Happy|Pharrell Williams;Pharrell|2014|ZbZSe6N_BXs
+Get Lucky|Daft Punk + Pharrell Williams + Nile Rodgers;Pharrell|2013|5NV6Rdv1a3I
+Royals|Lorde|2013|nlcIKh6sBtc
+Can't Hold Us|Macklemore & Ryan Lewis + Ray Dalton;Macklemore|2013|2zNSgSzhBfM
+We Are Young|fun. + Janelle Monáe;Fun;Janelle Monae|2012|Sv6dMFF_yts
+Some Nights|fun.;Fun|2012|
+Timber|Pitbull + Kesha;Ke$ha|2013|hHUbLv4ThOo
+Give Me Everything|Pitbull + Ne-Yo + Afrojack + Nayer|2011|EPo5wWmKEaI
+Love Me Like You Do|Ellie Goulding|2015|AJtDXIazrMo
+Shake It Off|Taylor Swift;Taylor|2014|nfWlot6h_JM
+Blank Space|Taylor Swift;Taylor|2014|e-ORhEE9VVg
+We Are Never Ever Getting Back Together|Taylor Swift;Taylor|2012|WA4iX5D9Z64
+Bad Blood|Taylor Swift + Kendrick Lamar;Taylor|2015|QcIy9NiNbmo
+Look What You Made Me Do|Taylor Swift;Taylor|2017|3tmd-ClpJxA
+Anti-Hero;Antihero|Taylor Swift;Taylor|2022|b1kbLwvqugk
+Chandelier|Sia|2014|2vjPBrBU-TM
+Cheap Thrills|Sia + Sean Paul|2016|
+Titanium|David Guetta + Sia|2011|
+All About That Bass|Meghan Trainor|2014|7PCkvCPvDXk
+Counting Stars|OneRepublic;One Republic|2013|hT_nvWreIhg
+Radioactive|Imagine Dragons|2013|ktvTqknDobU
+Believer|Imagine Dragons|2017|7wtfhZwyrcc
+Thunder|Imagine Dragons|2017|fKopy74weus
+Wake Me Up|Avicii + Aloe Blacc|2013|IcrbM1l_BoI
+Levels|Avicii|2011|_ovdm2yX4MA
+Paradise|Coldplay|2011|1G4isv_Fylg
+Something Just Like This|The Chainsmokers + Coldplay;Chainsmokers|2017|FM7MFYoylVs
+Closer|The Chainsmokers + Halsey;Chainsmokers|2016|PT2_F-1esPk
+Lean On|Major Lazer + DJ Snake + MØ;MO|2015|YqeW9_5kURI
+Waka Waka (This Time for Africa);Waka Waka|Shakira|2010|pRpeEdMmmQ0
+Love the Way You Lie|Eminem + Rihanna|2010|uelHwf8o7_U
+Not Afraid|Eminem|2010|j5-yKhDd64s
+Telephone|Lady Gaga + Beyoncé;Gaga;Beyonce|2010|EVBsypHzF3U
+Shallow|Lady Gaga + Bradley Cooper;Gaga|2018|bo_efYhYU2A
+Thinking Out Loud|Ed Sheeran|2014|lp-EO5I60KA
+Shape of You|Ed Sheeran|2017|JGwWNGJdvx8
+Perfect|Ed Sheeran|2017|2Vv-BfVoq4g
+Bad Habits|Ed Sheeran|2021|orJSJGHjBLI
+Shivers|Ed Sheeran|2021|
+See You Again|Wiz Khalifa + Charlie Puth|2015|RgKAFK5djSk
+Attention|Charlie Puth|2017|
+Sorry|Justin Bieber;Bieber|2015|fRh_vgS2dFE
+Love Yourself|Justin Bieber;Bieber|2015|oyEuk8j8imI
+What Do You Mean?;What Do You Mean|Justin Bieber;Bieber|2015|DK_0jXPuIr0
+Peaches|Justin Bieber + Daniel Caesar + Giveon;Bieber|2021|
+Despacito|Luis Fonsi + Daddy Yankee + Justin Bieber|2017|kJQP7kiw5Fk
+Gangnam Style|PSY;Psy|2012|9bZkp7q19f0
+Blinding Lights|The Weeknd;Weeknd|2020|4NRXx6U8ABQ
+Starboy|The Weeknd + Daft Punk;Weeknd|2016|34Na4j8AVgA
+Can't Feel My Face|The Weeknd;Weeknd|2015|
+Can't Stop the Feeling!;Can't Stop the Feeling|Justin Timberlake;JT|2016|ru0K8uYEZWw
+Summer|Calvin Harris|2014|ebXbLfLACGM
+This Is What You Came For|Calvin Harris + Rihanna|2016|kOkQ4T5WO9E
+Rather Be|Clean Bandit + Jess Glynne|2014|m-M1AtrxztU
+Problem|Ariana Grande + Iggy Azalea;Ariana|2014|iS1g8G_njx8
+Bang Bang|Jessie J + Ariana Grande + Nicki Minaj;Ariana|2014|0HDdjwpPM3Y
+thank u, next;Thank You Next|Ariana Grande;Ariana|2018|gl1aHhXnN1k
+7 rings;Seven Rings|Ariana Grande;Ariana|2019|QYh6mYIJG2Y
+bad guy|Billie Eilish;Billie|2019|DyDfgMOUjCI
+Old Town Road|Lil Nas X + Billy Ray Cyrus|2019|
+Circles|Post Malone|2019|wXhTHyIgQ_U
+Sunflower|Post Malone + Swae Lee|2018|ApXoWvfEYVU
+Hotline Bling|Drake|2015|uxpDa-c-4Mc
+God's Plan;Gods Plan|Drake|2018|xpVfcZ0ZcFM
+One Dance|Drake + Wizkid + Kyla|2016|
+New Rules|Dua Lipa|2017|k2qgadSvNyU
+Havana|Camila Cabello + Young Thug|2017|HCjNJDNzw8Y
+Señorita;Senorita|Shawn Mendes + Camila Cabello|2019|Pkh8UtuejGw
+Stay with Me|Sam Smith|2014|pB-5XG-DbAA
+Take Me to Church|Hozier|2014|PVjiKRfKpPI
+All of Me|John Legend|2013|450p7goxZqg
+Someone You Loved|Lewis Capaldi|2019|zABLecsR5UE
+Dance Monkey|Tones and I;Tones & I|2019|q0hyYWKXF0Q
+Feel It Still|Portugal. The Man;Portugal the Man|2017|pBkHHoOIIn8
+Stressed Out|Twenty One Pilots;21 Pilots|2015|pXRviuL6vMY
+Shut Up and Dance|Walk the Moon|2014|6JCLY0Rlx6Q
+Watch Me (Whip/Nae Nae);Watch Me;Whip Nae Nae|Silentó;Silento|2015|vjW8wmF5VWc
+Wrecking Ball|Miley Cyrus;Miley|2013|My2FRPA3Gf8
+Let It Go|Idina Menzel|2014|
+Rude|MAGIC!;Magic|2014|
+Fancy|Iggy Azalea + Charli XCX|2014|
+Ho Hey|The Lumineers;Lumineers|2012|
+Pompeii|Bastille|2013|
+Pumped Up Kicks|Foster the People|2011|
+Super Bass|Nicki Minaj|2011|
+Starships|Nicki Minaj|2012|
+Stereo Hearts|Gym Class Heroes + Adam Levine|2011|
+Dynamite|Taio Cruz|2010|
+OMG|Usher + will.i.am|2010|
+Airplanes|B.o.B + Hayley Williams;BoB|2010|
+Just Give Me a Reason|P!nk + Nate Ruess;Pink|2013|
+Truth Hurts|Lizzo|2019|
+About Damn Time|Lizzo|2022|
+Sucker|Jonas Brothers;The Jonas Brothers|2019|
+Happier|Marshmello + Bastille|2018|
+Levitating|Dua Lipa|2020|TUVcZfQe-Kw
+Don't Start Now|Dua Lipa|2019|oygrmJFKYZY
+Watermelon Sugar|Harry Styles|2020|E07s5ZYygMg
+As It Was|Harry Styles|2022|H5v3kku4y6Q
+drivers license;Drivers License|Olivia Rodrigo|2021|ZmDBbnmKpqQ
+good 4 u;Good for You|Olivia Rodrigo|2021|gNi_6U5Pm_o
+vampire|Olivia Rodrigo|2023|
+Heat Waves|Glass Animals|2021|mRD0-GxqHVo
+Say So|Doja Cat|2020|pok8H_KF1FA
+Paint the Town Red|Doja Cat|2023|
+Stay|The Kid LAROI + Justin Bieber;Kid Laroi;Bieber|2021|kTJczUoc26U
+Flowers|Miley Cyrus;Miley|2023|G7KNmW9a75Y
+Dynamite|BTS|2020|gdZLi9oWNZg
+Mood|24kGoldn + iann dior|2020|
+Leave the Door Open|Silk Sonic;Bruno Mars;Anderson .Paak|2021|
+Kill Bill|SZA|2023|
+Unholy|Sam Smith + Kim Petras|2022|
+Calm Down|Rema + Selena Gomez|2023|
+Last Night|Morgan Wallen|2023|
+Fast Car|Luke Combs|2023|
+Espresso|Sabrina Carpenter|2024|
+Please Please Please|Sabrina Carpenter|2024|
+Lose Control|Teddy Swims|2024|
+Beautiful Things|Benson Boone|2024|
+Good Luck, Babe!;Good Luck Babe|Chappell Roan|2024|
+A Bar Song (Tipsy);A Bar Song;Tipsy|Shaboozey|2024|
+Birds of a Feather|Billie Eilish;Billie|2024|
+Die with a Smile|Lady Gaga + Bruno Mars;Gaga|2024|
+APT.;APT;Apartment|ROSÉ + Bruno Mars;Rose|2024|ekr2nIex040
+Texas Hold 'Em;Texas Hold Em|Beyoncé;Beyonce|2024|
+Abracadabra|Lady Gaga;Gaga|2025|
+Ordinary|Alex Warren|2025|`;
+
+DECK.kpop = `Gangnam Style;강남스타일|PSY;Psy;싸이|2012|9bZkp7q19f0
+Gentleman|PSY;Psy;싸이|2013|ASO_zypdnsQ
+Dynamite|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2020|gdZLi9oWNZg
+Butter|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2021|WMweEpGlu_U
+Boy With Luv;Boy with Love;작은 것들을 위한 시|BTS + Halsey;Bangtan Boys;방탄소년단|2019|XsX3ATc3FbA
+DNA|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2017|MBdVXkSdhwU
+Fake Love|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2018|7C2z4GqqS5E
+Blood Sweat & Tears;Blood Sweat and Tears;피 땀 눈물|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2016|hmE9f-TEutc
+IDOL|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2018|pBuZEGYXA6E
+Fire;불타오르네|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2016|ALj5MKjy2BU
+Spring Day;봄날|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2017|xEeFrLSkMm8
+MIC Drop;Mic Drop|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2017|kTlv5_Bs8aw
+ON|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2020|mPVDGOVjRQ0
+Permission to Dance|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2021|CuklIb9d3fI
+Life Goes On|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2020|
+I Need U|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2015|
+Save Me|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2016|
+Not Today|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2017|
+Yet to Come|BTS;Bangtan Boys;Bangtan Sonyeondan;방탄소년단|2022|
+Seven|Jungkook + Latto;Jung Kook;정국|2023|QU9c0053UAU
+Standing Next to You|Jungkook;Jung Kook;정국|2023|
+Like Crazy|Jimin;지민|2023|
+Who|Jimin;지민|2024|
+DDU-DU DDU-DU;Ddu Du Ddu Du;뚜두뚜두|BLACKPINK;Black Pink;블랙핑크|2018|IHNzOHi8sJs
+How You Like That|BLACKPINK;Black Pink;블랙핑크|2020|ioNng23DkIM
+Kill This Love|BLACKPINK;Black Pink;블랙핑크|2019|2S24-y0Ij3Y
+BOOMBAYAH;Boombayah;붐바야|BLACKPINK;Black Pink;블랙핑크|2016|bwmSjveL3Lc
+WHISTLE;Whistle;휘파람|BLACKPINK;Black Pink;블랙핑크|2016|dISNgvVpWlo
+As If It's Your Last;마지막처럼|BLACKPINK;Black Pink;블랙핑크|2017|Amq-qlqbjYA
+Playing with Fire;불장난|BLACKPINK;Black Pink;블랙핑크|2016|
+Lovesick Girls|BLACKPINK;Black Pink;블랙핑크|2020|dyRsYk0LyA8
+Pink Venom|BLACKPINK;Black Pink;블랙핑크|2022|gQlMMD8auMs
+Shut Down|BLACKPINK;Black Pink;블랙핑크|2022|POe9SOEKotk
+Ice Cream|BLACKPINK + Selena Gomez;Black Pink;블랙핑크|2020|
+JUMP;Jump|BLACKPINK;Black Pink;블랙핑크|2025|
+SOLO;Solo|JENNIE;Jennie;제니|2018|b73BI9eUkjM
+Mantra|JENNIE;Jennie;제니|2024|
+like JENNIE;Like Jennie|JENNIE;Jennie;제니|2025|
+On The Ground|ROSÉ;Rose;로제|2021|CKZvWhCqx1s
+APT.;APT;Apartment;아파트|ROSÉ + Bruno Mars;Rose;로제|2024|ekr2nIex040
+LALISA;Lalisa|LISA;Lisa;리사|2021|awkkyBH2zEo
+MONEY;Money|LISA;Lisa;리사|2021|
+ROCKSTAR;Rockstar|LISA;Lisa;리사|2024|
+FLOWER;Flower;꽃|JISOO;Jisoo;지수|2023|
+TT|TWICE;Twice;트와이스|2016|ePpPVE-GGJw
+CHEER UP;Cheer Up|TWICE;Twice;트와이스|2016|c7rCyll5AeY
+LIKEY;Likey|TWICE;Twice;트와이스|2017|V2hlQkVJZhE
+What is Love?;What is Love|TWICE;Twice;트와이스|2018|i0p1bmr0EmE
+FANCY;Fancy|TWICE;Twice;트와이스|2019|kOHB85vDuow
+Feel Special|TWICE;Twice;트와이스|2019|3ymwOvzhwHs
+SIGNAL;Signal|TWICE;Twice;트와이스|2017|
+KNOCK KNOCK;Knock Knock|TWICE;Twice;트와이스|2017|
+Dance The Night Away|TWICE;Twice;트와이스|2018|
+The Feels|TWICE;Twice;트와이스|2021|
+Talk that Talk|TWICE;Twice;트와이스|2022|
+Red Flavor;빨간 맛|Red Velvet;레드벨벳|2017|WyiIGEHQP8o
+Psycho|Red Velvet;레드벨벳|2019|uR8Mrt1IpXg
+Bad Boy|Red Velvet;레드벨벳|2018|J_CFBjAyPWE
+Russian Roulette;러시안 룰렛|Red Velvet;레드벨벳|2016|QslJYDX3o8s
+Dumb Dumb|Red Velvet;레드벨벳|2015|
+Feel My Rhythm|Red Velvet;레드벨벳|2022|
+Growl;으르렁|EXO;엑소|2013|I3dezFzsNss
+Call Me Baby|EXO;엑소|2015|yWfsla_Uh80
+Love Me Right|EXO;엑소|2015|
+Monster|EXO;엑소|2016|
+Love Shot|EXO;엑소|2018|pSudEWBAYRE
+FANTASTIC BABY;Fantastic Baby|BIGBANG;Big Bang;빅뱅|2012|AAbokV76tkU
+BANG BANG BANG;Bang Bang Bang;뱅뱅뱅|BIGBANG;Big Bang;빅뱅|2015|2ips2mM7Zqw
+Haru Haru;하루하루|BIGBANG;Big Bang;빅뱅|2008|
+Lies;거짓말|BIGBANG;Big Bang;빅뱅|2007|
+Crooked;삐딱하게|G-DRAGON;G Dragon;GD;지드래곤|2013|RKhsHGfrFmY
+Eyes, Nose, Lips;Eyes Nose Lips;눈,코,입|TAEYANG;Taeyang;태양|2014|
+Gee;지|Girls' Generation;Girls Generation;SNSD;소녀시대|2009|U7mPqycQ0tQ
+Genie;Tell Me Your Wish;소원을 말해봐|Girls' Generation;Girls Generation;SNSD;소녀시대|2009|6SwiSpudKWI
+I Got a Boy|Girls' Generation;Girls Generation;SNSD;소녀시대|2013|wq7ftOZBy0E
+Lion Heart|Girls' Generation;Girls Generation;SNSD;소녀시대|2015|
+I Am the Best;I'm the Best;내가 제일 잘 나가|2NE1;투애니원|2011|j7_lSP8Vc3o
+Fire|2NE1;투애니원|2009|
+Tell Me|Wonder Girls;원더걸스|2007|
+Nobody|Wonder Girls;원더걸스|2008|
+Sorry, Sorry;Sorry Sorry|Super Junior;Suju;슈퍼주니어|2009|x6QA3m58DQw
+Ring Ding Dong;링딩동|SHINee;Shinee;샤이니|2009|roughtzsCDI
+Lucifer|SHINee;Shinee;샤이니|2010|
+View|SHINee;Shinee;샤이니|2015|
+Mister;미스터|KARA;Kara;카라|2009|
+Electric Shock|f(x);fx;에프엑스|2012|
+DALLA DALLA;Dalla Dalla;달라달라|ITZY;Itzy;있지|2019|pNfTK39k55U
+ICY;Icy|ITZY;Itzy;있지|2019|
+WANNABE;Wannabe|ITZY;Itzy;있지|2020|fE2h3lGlOsk
+LOCO;Loco|ITZY;Itzy;있지|2021|
+Next Level|aespa;Aespa;에스파|2021|4TWR90KJl84
+Savage|aespa;Aespa;에스파|2021|WPdWvnAAurg
+Spicy|aespa;Aespa;에스파|2023|
+Supernova|aespa;Aespa;에스파|2024|phuiiNCxRMg
+Armageddon|aespa;Aespa;에스파|2024|
+Whiplash|aespa;Aespa;에스파|2024|
+Hype Boy|NewJeans;New Jeans;뉴진스|2022|11cta61wi0g
+Attention|NewJeans;New Jeans;뉴진스|2022|js1CtxSY38I
+Ditto|NewJeans;New Jeans;뉴진스|2022|pSUydWEqKwE
+OMG|NewJeans;New Jeans;뉴진스|2023|sVTy_wmn5SU
+Super Shy|NewJeans;New Jeans;뉴진스|2023|ArmDp-zijuc
+ETA|NewJeans;New Jeans;뉴진스|2023|
+How Sweet|NewJeans;New Jeans;뉴진스|2024|
+ELEVEN;Eleven|IVE;Ive;아이브|2021|--FmExEAsM8
+LOVE DIVE;Love Dive|IVE;Ive;아이브|2022|Y8JFxS1HlDo
+After LIKE;After Like|IVE;Ive;아이브|2022|
+I AM;I Am|IVE;Ive;아이브|2023|6ZUIwj3FgUY
+FEARLESS;Fearless|LE SSERAFIM;Le Sserafim;르세라핌|2022|4vbDFu0PUew
+ANTIFRAGILE;Antifragile|LE SSERAFIM;Le Sserafim;르세라핌|2022|pyf8cbqyfPs
+UNFORGIVEN;Unforgiven|LE SSERAFIM;Le Sserafim;르세라핌|2023|
+EASY;Easy|LE SSERAFIM;Le Sserafim;르세라핌|2024|
+LATATA;Latata|(G)I-DLE;G I-DLE;GIDLE;Idle;i-dle;여자아이들|2018|
+TOMBOY;Tomboy|(G)I-DLE;G I-DLE;GIDLE;Idle;i-dle;여자아이들|2022|Jh4QFaPmdss
+Nxde;Nude|(G)I-DLE;G I-DLE;GIDLE;Idle;i-dle;여자아이들|2022|
+Queencard;Queen Card;퀸카|(G)I-DLE;G I-DLE;GIDLE;Idle;i-dle;여자아이들|2023|7HDeem-JaSY
+God's Menu;Gods Menu;神메뉴|Stray Kids;SKZ;스트레이 키즈|2020|TQTlCHxyuu8
+Thunderous;소리꾼|Stray Kids;SKZ;스트레이 키즈|2021|
+MANIAC;Maniac|Stray Kids;SKZ;스트레이 키즈|2022|OvioeS1ZZ7o
+S-Class;특|Stray Kids;SKZ;스트레이 키즈|2023|JsOOis4bBFg
+LALALALA;Lalalala;락|Stray Kids;SKZ;스트레이 키즈|2023|
+Very Nice;Very Nice;아주 NICE|SEVENTEEN;Seventeen;SVT;세븐틴|2016|J-wFp43XOrA
+Don't Wanna Cry;울고 싶지 않아|SEVENTEEN;Seventeen;SVT;세븐틴|2017|
+HOT;Hot|SEVENTEEN;Seventeen;SVT;세븐틴|2022|
+Super;손오공|SEVENTEEN;Seventeen;SVT;세븐틴|2023|-GQg25oP0S4
+Cherry Bomb|NCT 127;NCT|2017|
+Kick It;영웅|NCT 127;NCT|2020|2OvyA2__Eas
+Hot Sauce;맛|NCT DREAM;NCT Dream;NCT|2021|
+Good Day;좋은 날|IU;아이유|2010|jeqdYqsrsA0
+Palette;팔레트|IU;아이유|2017|
+Blueming;블루밍|IU;아이유|2019|D1PvIWdJ8xo
+Celebrity|IU;아이유|2021|
+LILAC;Lilac;라일락|IU;아이유|2021|
+Starry Night;별이 빛나는 밤|MAMAMOO;Mamamoo;마마무|2018|
+HIP;Hip|MAMAMOO;Mamamoo;마마무|2019|KhTeiaCezwM
+Gashina;가시나|SUNMI;Sunmi;선미|2017|
+Magnetic|ILLIT;Illit;아일릿|2024|Vk5-c_v4gMU
+Cupid|FIFTY FIFTY;Fifty Fifty;피프티피프티|2023|Qc7_zRjH808
+SHEESH;Sheesh|BABYMONSTER;Baby Monster;베이비몬스터|2024|
+Golden|HUNTR/X + EJAE + Audrey Nuna + REI AMI;Huntrix;Huntr x;KPop Demon Hunters|2025|
+Soda Pop|Saja Boys;KPop Demon Hunters|2025|
+Crown;어느날 머리에서 뿔이 자랐다|TXT;TOMORROW X TOGETHER;Tomorrow by Together;투모로우바이투게더|2019|
+Sugar Rush Ride|TXT;TOMORROW X TOGETHER;Tomorrow by Together;투모로우바이투게더|2023|
+Wonderland|ATEEZ;Ateez;에이티즈|2019|
+BOUNCY;Bouncy|ATEEZ;Ateez;에이티즈|2023|
+Very Very Very;너무너무너무|I.O.I;IOI;아이오아이|2016|
+PICK ME;Pick Me|PRODUCE 101;Produce 101|2016|
+Abracadabra;아브라카다브라|Brown Eyed Girls;브라운아이드걸스|2009|
+Ah-Choo;Ah Choo|Lovelyz;러블리즈|2015|
+Rough;Time for the Moon Night;시간을 달려서|GFRIEND;Gfriend;G-Friend;여자친구|2016|
+Up & Down;Up and Down;위아래|EXID|2014|
+NoNoNo;No No No|Apink;A Pink;에이핑크|2013|
+Bad Girl Good Girl|miss A;Miss A;미쓰에이|2010|
+Hands Up|2PM|2011|
+LOVE SCENARIO;Love Scenario;사랑을 했다|iKON;Ikon;아이콘|2018|
+REALLY REALLY;Really Really|WINNER;Winner;위너|2017|
+BBoom BBoom;Bboom Bboom;뿜뿜|MOMOLAND;Momoland;모모랜드|2018|
+Bubble Pop!;Bubble Pop|HyunA;Hyuna;현아|2011|
+Roller Coaster|CHUNG HA;Chungha;청하|2017|`;
+
+const DECKS = {
+  usa:  { name: "USA Hits", short: "USA", blurb: "Big American hits from the 1960s to now" },
+  kpop: { name: "K-pop",    short: "K-pop", blurb: "K-pop bangers from the 2000s to now" }
+};
+
+const MODES = {
+  split: {
+    name: "Split Second", color: "var(--m-split)", min: 1, max: 12,
+    pitch: "Hear one second of a hit. Name the artist, the song and the year, or hold your nerve for more.",
+    rules: [
+      "Everyone hears <b>1 second</b> of a big hit.",
+      "Type the artist, the song and the year and lock in, or wait to hear more.",
+      "Next comes <b>2 seconds</b> from a different part of the song, then <b>3 seconds</b>. After that it's answer time.",
+      "Score 1 for the artist, 1 for the song and 1 for the exact year (½ if you're within 2 years).",
+      "Lock in after 1 second to score <b>×3</b>, after 2 seconds for <b>×2</b>. Most points wins."
+    ]
+  },
+  timeline: {
+    name: "Timeline", color: "var(--m-time)", min: 1, max: 8,
+    pitch: "Hear a hit and slot it into your timeline of years. First to fill their timeline wins.",
+    rules: [
+      "Everyone starts with one song in their timeline, year showing.",
+      "On your turn, listen to a new song and put it where you think it belongs: before, between or after your cards.",
+      "Right spot? You keep the card. Wrong spot? It's gone.",
+      "Name the artist and the song too to earn a <b>★</b>. Spend a ★ to skip a song you don't know.",
+      "First to fill their timeline wins."
+    ]
+  }
+};
+</script>
+<script>
+(() => {
+"use strict";
+
+/* ================= utils ================= */
+const $ = s => document.querySelector(s);
+const app = $("#app"), layer = $("#layer");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rnd = n => Math.floor(Math.random() * n);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const uid = () => Math.random().toString(36).slice(2, 10);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const params = new URLSearchParams(location.search);
+// per-tab identity in a room, so two tabs on one device are two players (survives reloads)
+const tabStore = {
+  get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+};
+const cleanName = n => String(n || "").replace(/\s+/g, " ").trim().slice(0, 16);
+const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ";
+const newCode = () => Array.from({ length: 4 }, () => CODE_CHARS[rnd(CODE_CHARS.length)]).join("");
+const PREFIX = "earworm-v1-";
+const RTC_OK = typeof RTCPeerConnection !== "undefined" || params.get("net") === "local";
+const NO_RTC = "Rooms don't work in this browser. Open Earworm in Safari or Chrome to start or join a room.";
+const FAKE = params.get("yt") === "fake";      // test mode: a pretend player instead of YouTube
+const half = n => n % 1 ? `${Math.floor(n) || ""}½` : String(n);
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+const DEFAULTS = {
+  split:    { deck: "usa", songs: 10 },
+  timeline: { deck: "usa", goal: 8 }
+};
+const freshSets = () => JSON.parse(JSON.stringify(DEFAULTS));
+const MULT = { 1: 3, 2: 2, 3: 1 };
+const TL_CLIP = 12, REVEAL_CLIP = 15;
+
+/* ================= songs ================= */
+const SONGS = {};
+for (const k in DECK) SONGS[k] = DECK[k].split("\n").map(s => s.trim()).filter(Boolean).map(line => {
+  const [t, a, y, id, c] = line.split("|");
+  const ta = t.split(";").map(s => s.trim()).filter(Boolean);
+  const aa = a.split(";").map(s => s.trim()).filter(Boolean);
+  const main = aa[0].split(" + ");
+  const shown = main.length > 1 ? main.slice(0, -1).join(", ") + " & " + main[main.length - 1] : main[0];
+  return { t: ta[0], ta, a: shown, aa: [...new Set([...aa, shown, ...main])], y: Number(y), id: (id || "").trim(),
+           c: c ? c.split(",").map(Number).filter(n => isFinite(n)) : null };
+});
+
+/* answer matching: forgiving about case, accents, punctuation, "the", featured artists and small typos */
+function normFull(s) {
+  return String(s || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").normalize("NFC")
+    .replace(/&/g, " and ").replace(/\+/g, " and ").replace(/\$/g, "s").replace(/^\s*the\s+/, "")
+    .replace(/[^a-z0-9\uac00-\ud7a3\u4e00-\u9fff]/g, "");
+}
+function norm(s) {
+  s = String(s || "").toLowerCase().replace(/[\(\[].*?[\)\]]/g, " ").replace(/\s(feat\.?|ft\.?|featuring)\s.*$/, " ");
+  return normFull(s);
+}
+function lev(a, b) {
+  if (Math.abs(a.length - b.length) > 4) return 99;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+const slack = n => n <= 3 ? 0 : n <= 6 ? 1 : Math.min(4, Math.floor(n / 5));
+function same(guess, answer) {
+  const gs = [norm(guess), normFull(guess)].filter(Boolean), as = [norm(answer), normFull(answer)].filter(Boolean);
+  for (const g of gs) for (const a of as) {
+    if (g === a) return true;
+    if (/[\uac00-\ud7a3]/.test(a)) continue;   // Korean spellings must match exactly
+    if (a.length >= 4 && lev(g, a) <= slack(a.length)) return true;
+  }
+  return false;
+}
+function matchList(guess, list, split) {
+  if (!String(guess || "").trim()) return false;
+  if (list.some(a => same(guess, a))) return true;
+  if (!split) return false;
+  // "Bruno Mars and Mark Ronson" -> try each name on its own
+  const parts = String(guess).split(/\s*(?:,|&|\+|\band\b|\bx\b|\bwith\b|\bfeat\.?|\bft\.?|\bfeaturing\b)\s*/i).filter(p => p.trim().length > 1);
+  return parts.length > 1 && parts.some(p => list.some(a => same(p, a)));
+}
+const yearPts = (guess, y) => { const n = parseInt(guess, 10); if (!isFinite(n)) return 0; const d = Math.abs(n - y); return d === 0 ? 1 : d <= 2 ? 0.5 : 0; };
+function autoMark(song, ans) {
+  if (!ans) return { a: false, t: false, y: 0 };
+  return { a: matchList(ans.a, song.aa, true), t: matchList(ans.t, song.ta, false), y: yearPts(ans.y, song.y) };
+}
+const songKey = (deck, i) => { const s = SONGS[deck][i]; return deck + ":" + norm(s.t) + "-" + norm(s.aa[0]); };
+
+/* ================= state ================= */
+let S = null;      // shared game state; the host (or the single phone) is the source of truth
+let ME = null;     // my player id in a room; null when everyone shares one phone
+let ROLE = null;   // 'pass' | 'host' | 'guest'
+const U = {
+  screen: "home", pick: null, err: "", net: "",
+  pp: [],
+  sets: Object.assign(freshSets(), store.get("earworm-sets", {})),
+  name: store.get("earworm-name", ""),
+  key: store.get("earworm-ytkey", ""),
+  joinCode: (params.get("room") || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4),
+  drafts: {}, sheet: null, peek: false, autoPlayed: ""
+};
+if (U.joinCode) U.screen = "join";
+for (const k in DEFAULTS) U.sets[k] = Object.assign({}, DEFAULTS[k], U.sets[k]);
+
+/* ================= decks ================= */
+const badSet = () => new Set(store.get("earworm-bad", []));
+const playable = (deck, i) => FAKE || !!SONGS[deck][i].id || !!U.key;
+function playableCount(deck) { const bad = badSet(); return SONGS[deck].filter((_, i) => playable(deck, i) && !bad.has(songKey(deck, i))).length; }
+function makeQueue(deck) {
+  const seen = new Set(store.get("earworm-seen-" + deck, [])), bad = badSet();
+  const all = [...SONGS[deck].keys()].filter(i => playable(deck, i) && !bad.has(songKey(deck, i)));
+  return shuffle(all.filter(i => !seen.has(songKey(deck, i)))).concat(shuffle(all.filter(i => seen.has(songKey(deck, i)))));
+}
+function markSeen(deck, i) {
+  const k = songKey(deck, i);
+  let s = store.get("earworm-seen-" + deck, []);
+  if (!s.includes(k)) s.push(k);
+  if (s.length >= SONGS[deck].length - 5) s = [k];
+  store.set("earworm-seen-" + deck, s);
+}
+const curIdx = g => g.q[g.qi];
+const curSong = g => SONGS[g.deck][curIdx(g)];
+const curKey = g => songKey(g.deck, curIdx(g));
+
+/* ================= players ================= */
+const player = id => S && S.players.find(p => p.id === id);
+const nm = id => { const p = player(id); return p ? p.name : "?"; };
+const online = id => { const p = player(id); return !!(p && p.on); };
+// may this device act for player `pid`?
+const mine = pid => ROLE === "pass" || ME === pid || (ROLE === "host" && !online(pid));
+const isHostDevice = () => ROLE !== "guest";
+function uniqueName(n) {
+  let base = n || "Player", out = base, k = 2;
+  while (S.players.some(p => p.name.toLowerCase() === out.toLowerCase())) out = base + " " + k++;
+  return out;
+}
+
+/* ================= game setup ================= */
+const INIT = {
+  split(roster, set) {
+    const q = makeQueue(set.deck);
+    const g = { type: "split", roster, deck: set.deck, q, qi: 0, n: 1, songs: Math.min(set.songs, q.length),
+      stage: 1, played: 0, vid: "", ans: {}, more: {}, marks: {}, score: {}, phase: "guess", got: {} };
+    roster.forEach(p => { g.score[p] = 0; g.got[p] = 0; });
+    return g;
+  },
+  timeline(roster, set) {
+    const q = makeQueue(set.deck);
+    const g = { type: "timeline", roster, deck: set.deck, q, qi: 0, goal: set.goal, lines: {}, tokens: {},
+      at: 0, phase: "listen", played: 0, vid: "", pos: null, ok: false, named: false, guess: {}, turns: 0 };
+    roster.forEach(p => { g.lines[p] = q.length > g.qi ? [q[g.qi++]] : []; g.tokens[p] = 0; });
+    return g;
+  }
+};
+const tlPid = g => g.roster[g.at % g.roster.length];
+const lineSongs = (g, p) => (g.lines[p] || []).map(i => SONGS[g.deck][i]);
+function startGame() {
+  const roster = S.players.map(p => p.id);
+  S.stage = "play";
+  S.g = INIT[S.mode](roster, S.sets[S.mode]);
+  const g = S.g;
+  if (g.qi >= g.q.length || (g.type === "split" && g.songs < 1)) S.stage = "over";
+}
+const minPlayers = mode => MODES[mode].min;
+
+/* split helpers */
+const ssOpen = g => g.roster.filter(p => !g.ans[p]);
+function ssCheck(g) {
+  const open = ssOpen(g);
+  if (!open.length) return ssReveal(g);
+  if (open.every(p => g.more[p])) { g.stage++; g.more = {}; g.played = 0; }
+}
+function ssReveal(g) {
+  const song = curSong(g);
+  g.marks = {}; g.roster.forEach(p => g.marks[p] = autoMark(song, g.ans[p]));
+  g.phase = "reveal";
+}
+const ssPts = (g, p) => { const a = g.ans[p], m = g.marks[p]; return a && m ? ((m.a ? 1 : 0) + (m.t ? 1 : 0) + m.y) * MULT[a.at] : 0; };
+function ssFresh(g) { g.stage = 1; g.played = 0; g.vid = ""; g.ans = {}; g.more = {}; g.marks = {}; g.phase = "guess"; }
+
+/* timeline helpers */
+function tlFits(g, p, pos, y) {
+  const L = lineSongs(g, p), prev = L[pos - 1], next = L[pos];
+  return (!prev || prev.y <= y) && (!next || y <= next.y);
+}
+function tlFresh(g) { g.phase = "listen"; g.played = 0; g.vid = ""; g.pos = null; g.ok = false; g.named = false; g.guess = {}; }
+function tlNextSong(g) { g.qi++; tlFresh(g); if (g.qi >= g.q.length) S.stage = "over"; }
+
+/* ================= reducer (runs on the host / the single phone) ================= */
+function apply(a, from) {
+  if (!S || !a || typeof a.type !== "string") return;
+  const host = ROLE === "pass" || from === S.hostId;
+  const may = pid => ROLE === "pass" || from === pid || (from === S.hostId && !online(pid));
+  const g = S.g;
+  const v = a.v;
+
+  /* ---- lobby / meta ---- */
+  switch (a.type) {
+    case "setMode": if (host && S.stage === "lobby" && MODES[v]) S.mode = v; return;
+    case "set": {
+      if (!host || !S.sets[S.mode] || !(a.k in DEFAULTS[S.mode])) return;
+      const d = DEFAULTS[S.mode][a.k];
+      if (typeof d === "string") { if (a.k === "deck" && !DECKS[v]) return; S.sets[S.mode][a.k] = String(v); }
+      else S.sets[S.mode][a.k] = Number(v);
+      return;
+    }
+    case "kick": {
+      if (!host || v === S.hostId || S.stage !== "lobby") return;
+      S.players = S.players.filter(p => p.id !== v);
+      const c = Net.conns.get(v); if (c) { try { c.send({ t: "kicked" }); } catch (e) {} setTimeout(() => { try { c.close(); } catch (e) {} }, 200); Net.conns.delete(v); }
+      return;
+    }
+    case "start":
+      if (host && S.stage === "lobby" && S.players.length >= minPlayers(S.mode) && S.players.length <= MODES[S.mode].max) startGame();
+      return;
+    case "again": if (host && S.stage === "over") startGame(); return;
+    case "lobby": if (host) { S.stage = "lobby"; S.g = null; } return;
+    case "drop": if (host && g && S.stage === "play") dropPlayer(v); return;
+  }
+  if (!g || S.stage !== "play") return;
+
+  /* ---- SPLIT SECOND ---- */
+  if (g.type === "split") {
+    switch (a.type) {
+      case "ssPlayed": if (host && g.phase === "guess") { g.played++; if (a.val) g.vid = String(a.val).slice(0, 20); } break;
+      case "ssGuess": {
+        const val = a.val || {};
+        if (g.phase !== "guess" || !g.played || !g.roster.includes(v) || !may(v) || g.ans[v]) break;
+        const ans = { a: String(val.a || "").trim().slice(0, 60), t: String(val.t || "").trim().slice(0, 60), y: String(val.y || "").replace(/\D/g, "").slice(0, 4), at: g.stage };
+        if (!ans.a && !ans.t && !ans.y) break;
+        g.ans[v] = ans; delete g.more[v]; ssCheck(g);
+        break;
+      }
+      case "ssMore":
+        if (g.phase !== "guess" || !g.played || !g.roster.includes(v) || !may(v) || g.ans[v]) break;
+        if (g.stage < 3) g.more[v] = true; else g.ans[v] = { a: "", t: "", y: "", at: 3, none: true };
+        ssCheck(g);
+        break;
+      case "ssMark": {
+        const m = g.marks[v];
+        if (!host || g.phase !== "reveal" || !m || !g.ans[v] || g.ans[v].none) break;
+        if (a.k === "a" || a.k === "t") m[a.k] = !m[a.k];
+        else if (a.k === "y") m.y = m.y === 1 ? 0.5 : m.y === 0.5 ? 0 : 1;
+        break;
+      }
+      case "ssNext":
+        if (!host || g.phase !== "reveal") break;
+        g.roster.forEach(p => { const pts = ssPts(g, p); g.score[p] = (g.score[p] || 0) + pts; if (pts) g.got[p] = (g.got[p] || 0) + 1; });
+        if (g.n >= g.songs || g.qi + 1 >= g.q.length) { S.stage = "over"; break; }
+        g.n++; g.qi++; ssFresh(g);
+        break;
+      case "ssBad":   // this song won't play on the host's phone: swap in the next one
+        if (!host || g.phase !== "guess" || v !== curKey(g)) break;
+        g.qi++; ssFresh(g);
+        if (g.qi >= g.q.length) { if (g.n > 1) { g.songs = g.n - 1; } S.stage = "over"; }
+        break;
+    }
+    return;
+  }
+
+  /* ---- TIMELINE ---- */
+  if (g.type === "timeline") {
+    const cur = tlPid(g);
+    switch (a.type) {
+      case "tlPlayed": if (host && g.phase === "listen") { g.played++; if (a.val) g.vid = String(a.val).slice(0, 20); } break;
+      case "tlPlace": {
+        const pos = Number(v), L = g.lines[cur] || [], val = a.val || {};
+        if (g.phase !== "listen" || !g.played || !may(cur) || !(pos >= 0 && pos <= L.length)) break;
+        const song = curSong(g);
+        g.pos = pos; g.ok = tlFits(g, cur, pos, song.y);
+        g.guess = { a: String(val.a || "").trim().slice(0, 60), t: String(val.t || "").trim().slice(0, 60) };
+        g.named = matchList(g.guess.a, song.aa, true) && matchList(g.guess.t, song.ta, false);
+        g.phase = "reveal";
+        break;
+      }
+      case "tlMark": if (host && g.phase === "reveal" && (g.guess.a || g.guess.t)) g.named = !g.named; break;
+      case "tlSkip":
+        if (g.phase !== "listen" || !may(cur) || !(g.tokens[cur] > 0)) break;
+        g.tokens[cur]--; tlNextSong(g);
+        break;
+      case "tlNext": {
+        if (g.phase !== "reveal" || !(host || may(cur))) break;
+        const song = curSong(g), L = g.lines[cur];
+        if (g.ok) {
+          let at = L.findIndex(i => SONGS[g.deck][i].y > song.y); if (at < 0) at = L.length;
+          L.splice(at, 0, curIdx(g));
+        }
+        if (g.named) g.tokens[cur] = Math.min(5, (g.tokens[cur] || 0) + 1);
+        g.turns++;
+        if (L.length >= g.goal) { g.winner = cur; S.stage = "over"; break; }
+        g.at = (g.at + 1) % g.roster.length;
+        tlNextSong(g);
+        break;
+      }
+      case "tlBad":
+        if (!host || g.phase !== "listen" || v !== curKey(g)) break;
+        tlNextSong(g);
+        break;
+    }
+  }
+}
+function dropPlayer(pid) {
+  const g = S.g; if (!g.roster.includes(pid)) return;
+  if (g.type === "split") {
+    g.roster = g.roster.filter(p => p !== pid);
+    delete g.ans[pid]; delete g.more[pid]; delete g.marks[pid];
+    if (!g.roster.length) { S.stage = "over"; return; }
+    if (g.phase === "guess") ssCheck(g);
+  } else {
+    const wasCur = tlPid(g) === pid, idx = g.roster.indexOf(pid);
+    g.roster = g.roster.filter(p => p !== pid);
+    if (!g.roster.length) { S.stage = "over"; return; }
+    if (idx < g.at) g.at--;
+    g.at = g.at % g.roster.length;
+    if (wasCur) { g.phase = "listen"; g.pos = null; g.ok = false; g.named = false; g.guess = {}; }
+  }
+}
+
+/* ================= YouTube =================
+   Only the host's phone (or the single phone) plays sound. One hidden player is reused for every
+   song so the browser's "tap to allow sound" permission sticks after the first tap.            */
+async function ytApi(path, q) {
+  const r = await fetch(`https://www.googleapis.com/youtube/v3/${path}?` + new URLSearchParams(Object.assign({}, q, { key: U.key })));
+  if (!r.ok) throw { code: r.status === 403 ? "quota" : "api" };
+  return r.json();
+}
+const fitsTitle = (title, song) => song.ta.some(t => normFull(title).includes(normFull(t)) || normFull(title).includes(norm(t)));
+async function resolveId(song, key, avoid) {
+  const cache = store.get("earworm-vid", {});
+  if (cache[key] && cache[key] !== avoid) return cache[key];
+  if (FAKE) return song.id || "fake";
+  if (!U.key) { if (song.id && song.id !== avoid) return song.id; throw { code: "nokey" }; }
+  if (song.id && song.id !== avoid) {
+    try {
+      const r = await ytApi("videos", { part: "snippet,status", id: song.id }), it = r.items && r.items[0];
+      if (it && it.status.embeddable !== false && fitsTitle(it.snippet.title, song)) { cache[key] = song.id; store.set("earworm-vid", cache); return song.id; }
+    } catch (e) { return song.id; }      // key problem or quota: trust the saved video
+  }
+  const r = await ytApi("search", { part: "snippet", type: "video", videoEmbeddable: "true", maxResults: 10, q: `${song.aa[0].split(" + ")[0]} ${song.t} official` });
+  const items = (r.items || []).filter(it => it.id && it.id.videoId && it.id.videoId !== avoid && fitsTitle(it.snippet.title, song));
+  const art = normFull(song.aa[0].split(" + ")[0]);
+  const score = it => { const ch = normFull(it.snippet.channelTitle), t = it.snippet.title.toLowerCase();
+    return (ch.includes(art) ? 3 : 0) + (ch.includes("vevo") || ch.endsWith("topic") ? 2 : 0) + (/official/.test(t) ? 1 : 0) - (/cover|karaoke|lyrics?|reaction|live/.test(t) ? 4 : 0); };
+  items.sort((x, y) => score(y) - score(x));
+  if (!items.length) throw { code: "notfound" };
+  cache[key] = items[0].id.videoId; store.set("earworm-vid", cache);
+  return items[0].id.videoId;
+}
+const CHECK_VIDEO = "jNQXAC9IVRw";   // "Me at the zoo": a harmless clip for the one-time sound check
+const Tune = {
+  st: "idle", msg: "", key: "", id: "", dur: 0, unlocked: FAKE, p: null, pp: null, apiP: null,
+  tok: 0, ctok: 0, err: null, t: null, log: [],
+  set(st, msg) { this.st = st; this.msg = msg || ""; render(); },
+  api() {
+    if (this.apiP) return this.apiP;
+    return this.apiP = new Promise((res, rej) => {
+      if (window.YT && window.YT.Player) return res();
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => { if (prev) prev(); res(); };
+      const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api";
+      s.onerror = () => { this.apiP = null; rej({ code: "offline" }); };
+      document.head.appendChild(s);
+      setTimeout(() => rej({ code: "offline" }), 15000);
+    });
+  },
+  player() {
+    if (this.pp) return this.pp;
+    return this.pp = this.api().then(() => new Promise(res => {
+      const p = new YT.Player("ytp", {
+        width: 320, height: 180, videoId: CHECK_VIDEO,
+        playerVars: { playsinline: 1, controls: 0, disablekb: 1, rel: 0, fs: 0, iv_load_policy: 3, modestbranding: 1 },
+        events: {
+          onReady: () => { this.p = p; res(p); },
+          onStateChange: e => { if (e.data === 1 && !this.unlocked) { this.unlocked = true; try { p.pauseVideo(); } catch (x) {} } },
+          onError: e => { this.err = e.data; }
+        }
+      });
+    }), e => { this.pp = null; throw e; });
+  },
+  until(fn, ms) {
+    return new Promise((res, rej) => {
+      const t0 = Date.now();
+      const tick = () => {
+        if (this.err != null) return rej({ code: this.err });
+        let ok = false; try { ok = fn(); } catch (e) {}
+        if (ok) return res();
+        if (Date.now() - t0 > ms) return rej({ code: "timeout" });
+        setTimeout(tick, 100);
+      };
+      tick();
+    });
+  },
+  async prepare(song, key, avoid) {
+    const tok = ++this.tok; this.halt();
+    this.key = key; this.id = ""; this.dur = 0; this.err = null; this.set("load");
+    try {
+      const id = await resolveId(song, key, avoid);
+      if (tok !== this.tok) return;
+      if (FAKE) { await new Promise(r => setTimeout(r, 40)); if (tok !== this.tok) return; this.id = id || "fake"; this.dur = 210; this.set("ready"); return; }
+      const p = await this.player();
+      if (tok !== this.tok) return;
+      if (!this.unlocked) {                     // the browser needs one real tap on the player before it allows sound
+        this.set("lock");
+        await this.until(() => this.unlocked, 36e5);
+        if (tok !== this.tok) return;
+        this.set("load");
+      }
+      this.err = null; this.id = id;
+      p.mute(); p.loadVideoById({ videoId: id, startSeconds: 0 });
+      // let it play silently until it's really running (any advert plays out here, muted)
+      await this.until(() => p.getVideoData().video_id === id && p.getPlayerState() === 1 && p.getDuration() > 0 && p.getCurrentTime() > 0.4, 45000);
+      if (tok !== this.tok) return;
+      p.pauseVideo(); this.dur = p.getDuration(); this.set("ready");
+    } catch (e) {
+      if (tok !== this.tok) return;
+      const code = e && e.code;
+      const bad = [2, 5, 100, 101, 150, "notfound", "nokey"].includes(code);
+      if (bad && this.id && U.key && !avoid) return this.prepare(song, key, this.id);   // try another upload of the song
+      if (bad) { const b = store.get("earworm-bad", []); if (!b.includes(key)) b.push(key); store.set("earworm-bad", b); }
+      this.set("err", bad ? "This song won't play here. Skipping it…" : code === "offline" ? "Couldn't reach YouTube. Check your internet connection." : "The song is taking too long to load.");
+      if (bad) setTimeout(() => { if (S && S.g && S.stage === "play" && this.key === key && this.st === "err") act({ type: S.g.type === "split" ? "ssBad" : "tlBad", v: key }); }, 1200);
+    }
+  },
+  halt() { this.ctok++; clearTimeout(this.t); if (this.p && !FAKE) { try { this.p.pauseVideo(); } catch (e) {} } if (this.st === "play") this.st = "ready"; },
+  stop() { this.tok++; this.halt(); this.key = ""; this.id = ""; this.st = "idle"; },
+  // play `secs` seconds from `start`, timed off the video clock so buffering never shortens a clip
+  clip(start, secs) {
+    if (this.st !== "ready" && this.st !== "play") return false;
+    const tok = ++this.ctok; clearTimeout(this.t);
+    start = Math.max(0, Math.round(start * 10) / 10);
+    this.log.push({ key: this.key, start, secs });
+    this.set("play");
+    if (FAKE) { this.t = setTimeout(() => { if (tok === this.ctok) this.set("ready"); }, secs * 1000); return true; }
+    const p = this.p, t0 = Date.now(), end = start + secs;
+    try { p.seekTo(start, true); p.unMute(); p.setVolume(100); p.playVideo(); } catch (e) {}
+    let began = false;
+    const tick = () => {
+      if (tok !== this.ctok) return;
+      let t = 0, st = -1; try { t = p.getCurrentTime(); st = p.getPlayerState(); } catch (e) {}
+      if (!began && st === 1 && t >= start - 1 && t < start + 1.5) began = true;
+      if ((began && t >= end) || Date.now() - t0 > secs * 1000 + 10000) { try { p.pauseVideo(); p.mute(); } catch (e) {} this.set("ready"); return; }
+      this.t = setTimeout(tick, 25);
+    };
+    tick();
+    return true;
+  }
+};
+function clipsFor(song, key) {
+  const fix = store.get("earworm-times", {})[key];
+  if (fix) return fix;
+  if (song.c && song.c.length === 3) return song.c;
+  const d = Tune.dur || 210, last = Math.max(0, d - 16);
+  // the chorus usually lands about a third of the way in; then a later part, then the opening
+  return [d * 0.31, d * 0.58, Math.max(6, d * 0.09)].map(x => Math.round(clamp(x, 0, last)));
+}
+function wantSong() {
+  if (!S || S.stage !== "play" || !isHostDevice() || !S.g) return null;
+  const g = S.g; if (g.qi >= g.q.length) return null;
+  return { song: curSong(g), key: curKey(g) };
+}
+function syncTune() {
+  const w = wantSong();
+  if (!w) { if (Tune.key) Tune.stop(); }
+  else if (w.key !== Tune.key) Tune.prepare(w.song, w.key);
+  const box = $("#ytbox"); if (box) box.classList.toggle("on", !!w && Tune.st === "lock");
+  // the answer is in: play the chorus for everyone
+  const g = S && S.g;
+  if (w && g && g.phase === "reveal" && U.autoPlayed !== w.key + g.n + g.turns && Tune.st === "ready") {
+    U.autoPlayed = w.key + g.n + g.turns;
+    setTimeout(() => Tune.clip(clipsFor(w.song, w.key)[0], REVEAL_CLIP), 150);
+  }
+}
+
+/* ================= networking =================
+   Rooms are peer-to-peer (WebRTC via PeerJS). The host's phone holds the game;
+   everyone else sends actions to it and receives the updated state.            */
+const Net = { peer: null, conn: null, conns: new Map(), code: null, lost: false, retrying: false };
+
+class Emitter { constructor() { this.h = {}; } on(e, f) { (this.h[e] = this.h[e] || []).push(f); return this; } emit(e, ...a) { (this.h[e] || []).forEach(f => f(...a)); } }
+// Same-browser stand-in for PeerJS (?net=local): lets several tabs play a room with no internet.
+const BUS = ("BroadcastChannel" in window) ? new BroadcastChannel("earworm-local-net") : null;
+class FakeConn extends Emitter {
+  constructor(peer, remote, cid) { super(); this.peer = peer; this.remote = remote; this.cid = cid; this.open = false; }
+  send(d) { BUS.postMessage({ k: "d", to: this.remote, from: this.peer.id, cid: this.cid, d: JSON.parse(JSON.stringify(d)) }); }
+  close() { if (!this.open) return; this.open = false; BUS.postMessage({ k: "x", to: this.remote, from: this.peer.id, cid: this.cid }); this.emit("close"); }
+}
+class FakePeer extends Emitter {
+  constructor(id) {
+    super(); this.id = typeof id === "string" ? id : "anon-" + uid(); this.conns = {};
+    this.onmsg = ev => this.recv(ev.data); BUS.addEventListener("message", this.onmsg);
+    setTimeout(() => this.emit("open", this.id), 20);
+  }
+  recv(m) {
+    if (m.to !== this.id) return;
+    const c = this.conns[m.cid];
+    if (m.k === "c") {
+      const nc = new FakeConn(this, m.from, m.cid); this.conns[m.cid] = nc; nc.open = true;
+      this.emit("connection", nc); BUS.postMessage({ k: "a", to: m.from, from: this.id, cid: m.cid });
+      setTimeout(() => nc.emit("open"), 0);
+    } else if (m.k === "a" && c) { clearTimeout(c.t); c.open = true; c.emit("open"); }
+    else if (m.k === "d" && c && c.open) c.emit("data", m.d);
+    else if (m.k === "x" && c && c.open) { c.open = false; c.emit("close"); }
+  }
+  connect(id) {
+    const cid = uid(), c = new FakeConn(this, id, cid); this.conns[cid] = c;
+    BUS.postMessage({ k: "c", to: id, from: this.id, cid });
+    c.t = setTimeout(() => this.emit("error", { type: "peer-unavailable" }), 1500);
+    return c;
+  }
+  reconnect() {}
+  destroy() { Object.values(this.conns).forEach(c => c.close()); BUS.removeEventListener("message", this.onmsg); }
+}
+async function loadPeer() {
+  if (params.get("net") === "local" && BUS) return FakePeer;
+  if (window.Peer) return window.Peer;
+  await new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js";
+    s.onload = res; s.onerror = () => rej(new Error("Couldn't load online rooms. Check your internet connection."));
+    document.head.appendChild(s);
+  });
+  return window.Peer;
+}
+function peerOpts() {
+  const h = params.get("peerhost");               // for local testing against a self-hosted PeerServer
+  if (!h) return { debug: 0 };
+  const [host, port] = h.split(":");
+  return { host, port: Number(port) || 9000, path: "/", secure: location.protocol === "https:", debug: 0 };
+}
+function hostRoom(code, keepCode, tries = 0) {
+  return loadPeer().then(P => new Promise((res, rej) => {
+    let opened = false;
+    const peer = new P(PREFIX + code, peerOpts());
+    peer.on("open", () => { opened = true; Net.peer = peer; Net.code = code; res(code); });
+    peer.on("error", e => {
+      if (!opened) {
+        try { peer.destroy(); } catch (x) {}
+        if (e.type === "unavailable-id" && !keepCode) hostRoom(newCode()).then(res, rej);
+        else if (e.type === "unavailable-id" && tries < 6) setTimeout(() => hostRoom(code, true, tries + 1).then(res, rej), 3000);
+        else if (e.type === "unavailable-id") rej(new Error("Room " + code + " is still in use. Try again in a minute, or start a new room."));
+        else rej(new Error(e.type === "browser-incompatible" ? NO_RTC : "Couldn't open a room (" + (e.type || e.message) + ")."));
+      }
+    });
+    peer.on("disconnected", () => { setTimeout(() => { try { if (!peer.destroyed) peer.reconnect(); } catch (x) {} }, 1000); });
+    peer.on("connection", conn => {
+      conn.on("data", d => hostRecv(conn, d));
+      conn.on("close", () => {
+        if (conn.pid && Net.conns.get(conn.pid) === conn) {
+          Net.conns.delete(conn.pid);
+          const p = player(conn.pid); if (p) { p.on = false; commit(); }
+        }
+      });
+      conn.on("error", () => {});
+    });
+  }));
+}
+function hostRecv(conn, d) {
+  if (!S || !d || typeof d !== "object") return;
+  if (d.t === "join") {
+    const pid = String(d.pid || "").slice(0, 24) || uid();
+    let p = player(pid);
+    if (!p) {
+      if (S.players.length >= 16) { conn.send({ t: "err", msg: "That room is full." }); return; }
+      p = { id: pid, name: uniqueName(cleanName(d.name) || "Player"), on: true };
+      S.players.push(p);
+    }
+    p.on = true; conn.pid = pid;
+    const old = Net.conns.get(pid);
+    Net.conns.set(pid, conn);
+    if (old && old !== conn) { try { old.close(); } catch (e) {} }
+    conn.send({ t: "hello", pid });
+    commit();
+  } else if (d.t === "act" && conn.pid) { apply(d.a, conn.pid); commit(); }
+  else if (d.t === "bye" && conn.pid) {
+    if (S.stage === "lobby") S.players = S.players.filter(p => p.id !== conn.pid);
+    else { const p = player(conn.pid); if (p) p.on = false; }
+    Net.conns.delete(conn.pid); commit();
+  }
+}
+function joinRoom(code, name) {
+  const pid = tabStore.get("earworm-pid-" + code) || uid();
+  return loadPeer().then(P => new Promise((res, rej) => {
+    let done = false;
+    const peer = new P(peerOpts());
+    const fail = msg => { if (done) return; done = true; clearTimeout(timer); try { peer.destroy(); } catch (e) {} rej(new Error(msg)); };
+    const timer = setTimeout(() => fail("Couldn't reach room " + code + ". Is the host's screen still open?"), 15000);
+    peer.on("error", e => {
+      if (!done) fail(e.type === "peer-unavailable" ? "No room called " + code + ". Check the code, or ask the host to keep Earworm open."
+        : e.type === "browser-incompatible" ? NO_RTC : "Couldn't connect (" + (e.type || e.message) + ").");
+    });
+    peer.on("open", () => {
+      const conn = peer.connect(PREFIX + code, { reliable: true });
+      conn.on("open", () => conn.send({ t: "join", pid, name }));
+      conn.on("data", d => {
+        if (!d) return;
+        if (d.t === "hello") {
+          ME = d.pid; ROLE = "guest"; tabStore.set("earworm-pid-" + code, d.pid);
+          if (!done) { done = true; clearTimeout(timer); if (Net.peer && Net.peer !== peer) { try { Net.peer.destroy(); } catch (e) {} } Net.peer = peer; Net.conn = conn; Net.code = code; Net.lost = false; res(); }
+        } else if (d.t === "state") { S = d.S; Net.lost = false; saveLocal(); render(); }
+        else if (d.t === "err") fail(d.msg);
+        else if (d.t === "kicked") { goHome("The host removed you from the room."); }
+        else if (d.t === "closed") { goHome("The host closed the room."); }
+      });
+      conn.on("close", () => {
+        if (!done || Net.conn !== conn || ROLE !== "guest") return;
+        Net.lost = true; render();
+        if (!Net.retrying) { Net.retrying = true; setTimeout(() => { Net.retrying = false; if (Net.lost) reconnect(true); }, 1500); }
+      });
+    });
+  }));
+}
+function reconnect(quiet) {
+  if (ROLE !== "guest" || !Net.code) return;
+  const me = player(ME);
+  joinRoom(Net.code, me ? me.name : U.name).then(() => { if (!quiet) toast("Reconnected"); render(); })
+    .catch(e => { if (!quiet) toast(e.message); render(); });
+}
+function broadcast() {
+  if (ROLE !== "host") return;
+  for (const [, c] of Net.conns) { if (c.open) { try { c.send({ t: "state", S }); } catch (e) {} } }
+}
+function commit() {
+  if (!S) return;
+  S.v = (S.v || 0) + 1;
+  saveLocal(); broadcast(); render();
+}
+function act(a) {
+  if (ROLE === "guest") {
+    if (Net.conn && Net.conn.open && !Net.lost) Net.conn.send({ t: "act", a });
+    else toast("Not connected. Tap Reconnect.");
+    return;
+  }
+  apply(a, ME); commit();
+}
+function saveLocal() {
+  if (!S) return;
+  if (ROLE === "guest") store.set("earworm-save", { role: "guest", code: Net.code, mode: S.mode, t: Date.now() });
+  else store.set("earworm-save", { role: ROLE, S, me: ME, t: Date.now() });
+}
+function teardown() {
+  if (ROLE === "host") { for (const [, c] of Net.conns) { try { c.send({ t: "closed" }); } catch (e) {} } }
+  if (ROLE === "guest" && Net.conn) { try { Net.conn.send({ t: "bye" }); } catch (e) {} }
+  const p = Net.peer;
+  setTimeout(() => { try { p && p.destroy(); } catch (e) {} }, 150);
+  Net.peer = null; Net.conn = null; Net.conns = new Map(); Net.code = null; Net.lost = false;
+}
+function goHome(msg) {
+  teardown(); store.del("earworm-save");
+  S = null; ME = null; ROLE = null; U.sheet = null; U.peek = false; U.screen = "home";
+  render(); if (msg) toast(msg);
+}
+
+/* ================= views: pieces ================= */
+const modeCard = k => {
+  const m = MODES[k];
+  return `<button class="mode" style="--mc:${m.color}" data-a="pick" data-v="${k}">
+    <span class="swatch"></span><span class="blob"></span>
+    <span class="name">${m.name}</span>
+    <span class="pitch">${m.pitch}</span>
+  </button>`;
+};
+const rulesBlock = k => `<ol class="rules">${MODES[k].rules.map(r => `<li><span>${r}</span></li>`).join("")}</ol>`;
+const wait = t => `<div class="wait">${t}</div>`;
+const hint = t => `<p class="hint">${t}</p>`;
+const seg = (k, opts, cur, editable, fmt) => `<div class="seg" role="group">${opts.map(o =>
+  `<button data-a="set" data-k="${k}" data-v="${o}" aria-pressed="${String(o) === String(cur)}" ${editable ? "" : "disabled"}>${fmt ? fmt(o) : o}</button>`).join("")}</div>`;
+function settingsBlock(mode, set, editable) {
+  const r = [["Songs", seg("deck", Object.keys(DECKS), set.deck, editable, o => DECKS[o].short)]];
+  if (mode === "split") r.push(["How many", seg("songs", [5, 10, 15], set.songs, editable)]);
+  else r.push(["Cards to win", seg("goal", [5, 8, 10], set.goal, editable)]);
+  const total = SONGS[set.deck].length, ready = playableCount(set.deck);
+  const note = `<div class="faint small">${esc(DECKS[set.deck].blurb)}. ${ready < total
+    ? `${ready} of ${total} songs ready.${isHostDevice() ? " Add a YouTube key in Settings for the rest." : ""}` : `${total} songs.`}</div>`;
+  return `<div class="stack">${r.map(([l, c]) => `<div class="row wrap"><span class="eyebrow grow">${l}</span>${c}</div>`).join("")}${note}</div>`;
+}
+function topbar(info) {
+  const bar = `<div class="gtop"><span class="mchip">${MODES[S.mode].name}</span><span class="info">${info}</span>
+    <button class="icon-btn" data-a="rules" aria-label="Rules">?</button><button class="icon-btn" data-a="menu" aria-label="Menu">⋯</button></div>`;
+  return bar + netbar();
+}
+function netbar() {
+  if (ROLE === "guest" && Net.lost) return `<div class="netbar"><span class="grow">Lost connection to the host.</span><button class="ghost" data-a="reconnect">Reconnect</button></div>`;
+  if (ROLE === "host" && S.g) {
+    const off = S.g.roster.filter(p => !online(p) && p !== ME);
+    if (off.length) return `<div class="netbar"><span class="grow">${off.map(nm).map(esc).join(", ")} ${off.length > 1 ? "are" : "is"} offline. You can answer for them, or remove them in ⋯.</span></div>`;
+  }
+  return "";
+}
+function handoff(to, sub, warn) {
+  return `<div class="handoff"><div class="lbl">${sub || "Pass the phone to"}</div><div class="to">${esc(to)}</div>${warn ? `<div class="warn">${warn}</div>` : ""}</div>`;
+}
+const spectator = () => wait("You joined mid-game. You'll be in the next game.");
+const inGame = () => ROLE === "pass" || S.g.roster.includes(ME);
+const EQ = `<span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`;
+// the big play button (host's phone only)
+function playBtn(action, label, sub, replay) {
+  if (Tune.st === "play") return `<div class="player"><div class="playbtn busy" aria-live="polite">${EQ}<small>Playing</small></div></div>`;
+  if (Tune.st === "err") return `<div class="player"><div class="playbtn busy"><span class="ic">⚠️</span></div><div class="err center">${esc(Tune.msg)}</div>
+    <div class="row"><button class="ghost" data-a="tuneRetry">↻ Try again</button><button class="ghost" data-a="tuneSkip">Skip this song</button></div></div>`;
+  if (Tune.st !== "ready") return `<div class="player"><div class="playbtn busy"><span class="ic">⏳</span><small>${Tune.st === "lock" ? "Sound check" : "Loading song"}</small></div></div>`;
+  if (replay) return `<div class="row" style="justify-content:center"><button class="ghost" data-a="${action}">↻ ${label}</button></div>`;
+  return `<div class="player"><button class="playbtn" data-a="${action}"><span class="ic">▶</span><b>${label}</b>${sub ? `<small>${sub}</small>` : ""}</button></div>`;
+}
+const scoreStrip = (ids, val, act) => `<div class="scores">${ids.map(p => `<span class="sc-pill ${p === act ? "act" : ""}"><span class="tn">${esc(nm(p))}</span><b>${val(p)}</b></span>`).join("")}</div>`;
+const art = vid => vid ? `style="background-image:url('https://i.ytimg.com/vi/${esc(vid)}/hqdefault.jpg')"` : "";
+const songCard = (song, vid) => `<div class="songcard"><div class="art" ${art(vid)}>${vid ? "" : "🎵"}</div><div class="grow" style="min-width:0">
+  <div class="tt">${esc(song.t)}</div><div class="ar">${esc(song.a)}</div><div class="yr">${song.y}</div></div></div>`;
+
+/* ================= views: screens ================= */
+function homeView() {
+  const sv = store.get("earworm-save", null);
+  const resumable = sv && Date.now() - sv.t < 12 * 3600e3 && (sv.role === "guest" ? sv.code : sv.S);
+  const resumeMode = resumable ? (sv.role === "guest" ? sv.mode : sv.S.mode) : null;
+  return `<section class="screen">
+    <div class="brand"><h1>Ear<i>worm</i></h1>
+      <div class="ko">Name the hit from <b>one second</b> of it</div></div>
+    ${resumable ? `<button class="cta alt" data-a="resume">Resume ${MODES[resumeMode] ? MODES[resumeMode].name : ""} ${sv.role === "pass" ? "game" : "room"}<span class="sub">${sv.role === "guest" ? "Rejoin room " + esc(sv.code) : sv.role === "host" ? "Reopen your room " + esc(sv.S.code) : "Pick up where you left off"}</span></button>` : ""}
+    <div class="eyebrow">Pick a game</div>
+    <div class="modes">${Object.keys(MODES).map(modeCard).join("")}</div>
+    <div class="faint small center">USA Hits (${SONGS.usa.length} songs) and K-pop (${SONGS.kpop.length} songs) in both games</div>
+    <div class="bottom"><button class="cta alt" data-a="goJoin">Join a room<span class="sub">Got a 4-letter code from a friend?</span></button>
+      <button class="link" data-a="settings">⚙ YouTube settings</button></div>
+  </section>`;
+}
+function modeView() {
+  const k = U.pick, m = MODES[k];
+  return `<section class="screen">
+    <button class="topback" data-a="home">← All games</button>
+    <div><div class="display" style="font-size:clamp(46px,15vw,76px);color:var(--accent)">${m.name}</div></div>
+    <div class="dim" style="font-size:16px;line-height:1.4">${m.pitch}</div>
+    <div class="card stack"><div class="eyebrow">How to play</div>${rulesBlock(k)}</div>
+    <div class="faint small">The music plays from one phone, so turn the volume up or connect a speaker.</div>
+    <div class="bottom">
+      <button class="cta" data-a="goSetup">Play on one phone<span class="sub">Pass it around the room</span></button>
+      <button class="cta alt" data-a="goHost" ${RTC_OK ? "" : "disabled"}>Start a room<span class="sub">Everyone answers on their own phone</span></button>
+      ${RTC_OK ? "" : `<div class="faint small center">${NO_RTC}</div>`}
+    </div>
+  </section>`;
+}
+function setupView() {
+  const k = U.pick, m = MODES[k], set = U.sets[k], pp = U.pp;
+  const enough = pp.length >= m.min, tooMany = pp.length > m.max;
+  return `<section class="screen">
+    <button class="topback" data-a="pick" data-v="${k}">← ${m.name} rules</button>
+    <div class="row"><h2 class="display grow" style="font-size:34px">Who's playing?</h2></div>
+    <div class="row"><input class="inp grow" id="newname" maxlength="16" placeholder="Add a name" autocomplete="off" enterkeyhint="done" value="${esc(U.drafts.newname || "")}">
+      <button class="ghost on" data-a="addName" style="padding:15px 18px">Add</button></div>
+    <div class="plist">${pp.map(p => `<div class="p"><span class="nm">${esc(p.name)}</span>
+      <button class="x" data-a="rmName" data-v="${p.id}" aria-label="Remove ${esc(p.name)}">×</button></div>`).join("") || `<div class="faint small center">Add everyone who's playing. It works with 2 or more (or on your own for practice).</div>`}</div>
+    <div class="card">${settingsBlock(k, set, true)}</div>
+    <div class="bottom">
+      ${tooMany ? `<div class="err">${m.name} supports up to ${m.max} players.</div>` : ""}
+      <button class="cta" data-a="startPass" ${enough && !tooMany ? "" : "disabled"}>${enough ? "Start " + m.name : "Add a player"}</button>
+    </div>
+  </section>`;
+}
+function hostView() {
+  const m = MODES[U.pick];
+  return `<section class="screen">
+    <button class="topback" data-a="pick" data-v="${U.pick}">← ${m.name} rules</button>
+    <h2 class="display" style="font-size:38px">Start a room</h2>
+    <div class="dim">You'll get a 4-letter code. Friends open this page on their phones and type it in. Keep this screen open while you play: your phone runs the game and plays the music.</div>
+    <div class="field"><label for="hostname">Your name</label><input class="inp" id="hostname" maxlength="16" autocomplete="off" value="${esc(U.drafts.hostname ?? U.name)}" placeholder="Your name"></div>
+    ${U.err ? `<div class="err">${esc(U.err)}</div>` : ""}
+    <div class="bottom"><button class="cta" data-a="createRoom">Create ${m.name} room</button></div>
+  </section>`;
+}
+function joinView() {
+  return `<section class="screen">
+    <button class="topback" data-a="home">← Back</button>
+    <h2 class="display" style="font-size:38px">Join a room</h2>
+    <div class="field"><label for="joincode">Room code</label><input class="inp code" id="joincode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(U.drafts.joincode ?? U.joinCode)}" placeholder="ABCD"></div>
+    <div class="field"><label for="joinname">Your name</label><input class="inp" id="joinname" maxlength="16" autocomplete="off" value="${esc(U.drafts.joinname ?? U.name)}" placeholder="Your name"></div>
+    ${U.err ? `<div class="err">${esc(U.err)}</div>` : ""}
+    <div class="bottom">${RTC_OK ? "" : `<div class="err">${NO_RTC}</div>`}<button class="cta" data-a="joinRoom" ${RTC_OK ? "" : "disabled"}>Join</button></div>
+  </section>`;
+}
+function connectingView() {
+  return `<section class="screen" style="justify-content:center">${wait(esc(U.net || "Connecting…"))}
+    <button class="link" data-a="home">Cancel</button></section>`;
+}
+function lobbyView() {
+  const m = MODES[S.mode], set = S.sets[S.mode], host = ROLE === "host";
+  const n = S.players.length, enough = n >= m.min, tooMany = n > m.max;
+  return `<section class="screen">
+    <div class="gtop"><span class="eyebrow grow">Room code</span><button class="ghost" data-a="share">Share invite</button>${host ? `<button class="ghost" data-a="closeRoom">Close</button>` : `<button class="ghost" data-a="leave">Leave</button>`}</div>
+    <div class="room-code">${esc(S.code)}</div>
+    <div class="faint small center">Others join by opening this page and tapping <b>Join a room</b>.</div>
+    ${netbar()}
+    <div class="card tint stack">
+      <div class="row"><div class="grow"><div class="eyebrow">Tonight's game</div><div class="display" style="font-size:36px;color:var(--accent)">${m.name}</div></div>
+        ${host ? `<button class="ghost" data-a="modePick">Change</button>` : ""}</div>
+      <div class="dim" style="line-height:1.4">${m.pitch}</div>
+      <hr class="sep"><div class="eyebrow">Quick rules</div>${rulesBlock(S.mode)}
+    </div>
+    <div class="row"><span class="eyebrow grow">Players (${n})</span></div>
+    <div class="plist">${S.players.map(p => `<div class="p"><span class="dot ${p.on ? "" : "off"}"></span>
+      <span class="nm">${esc(p.name)} ${p.id === S.hostId ? "👑" : ""} ${p.id === ME ? `<span class="you">(you)</span>` : ""}</span>
+      ${host && p.id !== S.hostId ? `<button class="x" data-a="kick" data-v="${p.id}" aria-label="Remove ${esc(p.name)}">×</button>` : ""}</div>`).join("")}</div>
+    <div class="card">${settingsBlock(S.mode, set, host)}</div>
+    <div class="faint small center">${host ? "The music plays from your phone. Turn it up!" : `The music plays from ${esc(nm(S.hostId))}'s phone.`}</div>
+    <div class="bottom">
+      ${tooMany ? `<div class="err">${m.name} supports up to ${m.max} players. Remove someone or pick another game.</div>` : ""}
+      ${host ? `<button class="cta" data-a="start" ${enough && !tooMany ? "" : "disabled"}>Start ${m.name}</button>`
+             : wait(`Waiting for ${esc(nm(S.hostId))} to start`)}
+    </div>
+  </section>`;
+}
+
+/* ---------- SPLIT SECOND ---------- */
+const stageRow = g => `<div class="stage">${[1, 2, 3].map(s => `<span class="${s === g.stage ? "on" : s < g.stage ? "past" : ""}">${s} sec</span>`).join("")}</div>`;
+function guessForm(g, pid) {
+  const d = U.drafts, more = g.stage < 3 ? `Wait for ${g.stage + 1} seconds` : "No idea";
+  return `<div class="card gform">
+    <div class="row"><span class="eyebrow grow">${ROLE === "pass" ? esc(nm(pid)) + "'s guess" : "Your guess"}</span><span class="pill">×${MULT[g.stage]} if right</span></div>
+    <input class="inp" id="g-a" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Artist" value="${esc(d["g-a"] || "")}" enterkeyhint="next">
+    <input class="inp" id="g-t" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Song title" value="${esc(d["g-t"] || "")}" enterkeyhint="next">
+    <div class="row"><input class="inp yr" id="g-y" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Year" value="${esc(d["g-y"] || "")}" enterkeyhint="done">
+      <span class="faint small grow">Leave blank what you don't know.</span></div>
+    <div class="row"><button class="cta alt grow" data-a="ssMore" data-v="${pid}" style="padding:15px 10px;font-size:15px">${more}</button>
+      <button class="cta grow" data-a="ssGuess" data-v="${pid}" style="padding:15px 10px;font-size:17px">Lock in</button></div>
+  </div>`;
+}
+function statusChips(g) {
+  return `<div class="chips">${g.roster.map(p => {
+    const a = g.ans[p], w = g.more[p];
+    return `<span class="chip ${a ? "done" : ""}">${a ? "🔒" : w ? "⏳" : "…"} ${esc(nm(p))}</span>`;
+  }).join("")}</div>`;
+}
+function splitView() {
+  const g = S.g, song = curSong(g), dev = isHostDevice();
+  const lead = g.roster.slice().sort((a, b) => (g.score[b] || 0) - (g.score[a] || 0));
+  let h = topbar(`Song ${g.n}/${g.songs} · ${DECKS[g.deck].short}`) + scoreStrip(lead, p => half(g.score[p] || 0));
+  if (g.phase === "guess") {
+    h += stageRow(g);
+    const label = `${g.stage} second${g.stage > 1 ? "s" : ""}`;
+    if (!inGame()) return h + (dev ? playBtn("ssPlay", label, "Play", g.played > 0) : "") + spectator();
+    if (ROLE === "pass") {
+      if (!g.played) return h + playBtn("ssPlay", label, "Everyone listen") + hint(g.stage === 1 ? "One second of a big hit. Ready?" : `Nobody's sure yet. Here's <b>${label}</b> from a different part of the song.`);
+      const next = g.roster.find(p => !g.ans[p] && !g.more[p]);
+      if (!U.peek) return h + handoff(nm(next), "Pass the phone to", "Everyone else, keep your guesses to yourself!")
+        + `<div class="bottom"><button class="cta" data-a="peek">I'm ${esc(nm(next))}</button>${playBtn("ssPlay", "Play it again", "", true)}${statusChips(g)}</div>`;
+      return h + guessForm(g, next) + playBtn("ssPlay", "Play it again", "", true);
+    }
+    // a room: the host's phone plays the music, everyone answers on their own phone
+    if (dev) h += playBtn("ssPlay", label, g.played ? "Play again" : "Everyone listen", g.played > 0);
+    if (!g.played) return h + (dev ? hint(g.stage === 1 ? "Play the first second when everyone's listening." : `Nobody's sure yet. Play <b>${label}</b> from another part of the song.`)
+      : wait(`Listen to ${esc(nm(S.hostId))}'s phone`)) + statusChips(g);
+    const a = g.ans[ME];
+    if (a) h += `<div class="banner neutral"><span class="big">Locked in</span>after ${a.at} second${a.at > 1 ? "s" : ""}</div>`;
+    else if (g.more[ME]) h += wait(`Waiting to hear ${g.stage + 1} seconds`);
+    else h += guessForm(g, ME);
+    return h + statusChips(g);
+  }
+  // reveal
+  const host = ROLE === "pass" || ROLE === "host";
+  h += songCard(song, g.vid);
+  h += `<div class="res">${g.roster.map(p => {
+    const a = g.ans[p], m = g.marks[p] || {}, pts = ssPts(g, p);
+    if (!a || a.none) return `<div class="rw"><div class="hd"><span class="nm">${esc(nm(p))}</span><span class="at">no guess</span><b>0</b></div></div>`;
+    const mk = (k, txt, cls) => host
+      ? `<button class="mk ${cls}" data-a="ssMark" data-v="${p}" data-k="${k}" aria-label="Change mark"><span>${txt}</span></button>`
+      : `<span class="mk ${cls}"><span>${txt}</span></span>`;
+    const tick = ok => ok ? "✓" : "✗";
+    return `<div class="rw"><div class="hd"><span class="nm">${esc(nm(p))}</span><span class="at">at ${a.at}s ×${MULT[a.at]}</span><b>+${half(pts)}</b></div>
+      <div class="mks">${mk("a", `${tick(m.a)} ${a.a ? esc(a.a) : "—"}`, a.a ? (m.a ? "ok" : "") : (m.a ? "ok" : "none"))}
+      ${mk("t", `${tick(m.t)} ${a.t ? esc(a.t) : "—"}`, a.t ? (m.t ? "ok" : "") : (m.t ? "ok" : "none"))}
+      ${mk("y", `${m.y === 1 ? "✓" : m.y ? "½" : "✗"} ${a.y ? esc(a.y) : "—"}`, m.y === 1 ? "ok" : m.y ? "half" : a.y ? "" : "none")}</div></div>`;
+  }).join("")}</div>`;
+  if (host) h += `<div class="faint small center">Tap a guess to mark it right or wrong if the checker got it wrong.</div>`;
+  const last = g.n >= g.songs || g.qi + 1 >= g.q.length;
+  if (host) h += `<div class="bottom">${dev ? `<div class="linkrow"><button class="link" data-a="hearMore">▶ Play the chorus</button><button class="link" data-a="fixClips">Clips sounded off?</button></div>` : ""}
+    <button class="cta" data-a="ssNext">${last ? "See the winner" : "Next song"}</button></div>`;
+  else h += wait(`${esc(nm(S.hostId))} will start the next song`);
+  return h;
+}
+
+/* ---------- TIMELINE ---------- */
+function tlList(g, p, placing, mark) {
+  const L = lineSongs(g, p);
+  let rows = `<div class="end">▲ Earlier</div>`;
+  const gap = i => placing ? `<button class="gap" data-a="tlPlace" data-v="${i}">＋ Here</button>` : "";
+  const newRow = (s, ok) => `<div class="slot new ${ok ? "ok" : "bad"}"><span class="nm">${esc(s.t)}<small>${esc(s.a)}</small></span><span class="val">${s.y}</span></div>`;
+  L.forEach((s, i) => {
+    rows += gap(i);
+    if (mark && mark.pos === i) rows += newRow(mark.song, mark.ok);
+    rows += `<div class="slot"><span class="nm">${esc(s.t)}<small>${esc(s.a)}</small></span><span class="val">${s.y}</span></div>`;
+  });
+  rows += gap(L.length);
+  if (mark && mark.pos === L.length) rows += newRow(mark.song, mark.ok);
+  rows += `<div class="end">▼ Later</div>`;
+  return `<div class="order tl">${rows}</div>`;
+}
+function timelineView() {
+  const g = S.g, cur = tlPid(g), song = curSong(g), dev = isHostDevice();
+  const me = ROLE !== "pass" && cur === ME;
+  let h = topbar(`First to ${g.goal} · ${DECKS[g.deck].short}`)
+    + scoreStrip(g.roster, p => `${(g.lines[p] || []).length}${g.tokens[p] ? ` <span class="tokens">★${g.tokens[p]}</span>` : ""}`, cur);
+  const who = me ? "Your" : esc(nm(cur)) + "'s";
+  h += `<div class="capbar"><span class="crown" aria-hidden="true">🎧</span><div class="grow"><div class="eyebrow">${who} turn</div><div class="capname">${me ? "You" : esc(nm(cur))}</div></div></div>`;
+  if (g.phase === "listen") {
+    if (dev) h += playBtn("tlPlay", `${TL_CLIP} seconds`, g.played ? "Play again" : "Everyone listen", g.played > 0);
+    if (!g.played) {
+      h += dev ? hint(me ? "Play the song, then put it in your timeline." : `Play the song, then <b>${esc(nm(cur))}</b> puts it in their timeline.`) : wait(`Listen to ${esc(nm(S.hostId))}'s phone`);
+      return h + tlList(g, cur, false);
+    }
+    if (mine(cur) && inGame()) {
+      const d = U.drafts;
+      h += hint(`Where does it go? Name it too for a <b class="tokens">★</b> (optional).`);
+      h += `<div class="row"><input class="inp" id="tl-a" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Artist" value="${esc(d["tl-a"] || "")}">
+        <input class="inp" id="tl-t" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Song" value="${esc(d["tl-t"] || "")}"></div>`;
+      h += tlList(g, cur, true);
+      if (g.tokens[cur] > 0) h += `<div class="bottom"><button class="cta alt" data-a="tlSkip">Spend a ★ to skip this song</button></div>`;
+      return h;
+    }
+    return h + wait(`${esc(nm(cur))} is placing the song`) + tlList(g, cur, false);
+  }
+  // reveal
+  const host = ROLE === "pass" || ROLE === "host";
+  h += songCard(song, g.vid);
+  h += `<div class="banner ${g.ok ? "good" : "bad"}"><span class="big">${g.ok ? "Right spot!" : "Not quite"}</span>${g.ok ? "The card goes in the timeline." : `It's from ${song.y}, so the card is gone.`}</div>`;
+  if (g.guess.a || g.guess.t) {
+    const txt = `${g.named ? "✓" : "✗"} ${esc(g.guess.a || "—")} · ${esc(g.guess.t || "—")}`;
+    h += `<div class="row" style="justify-content:center">${host ? `<button class="mk ${g.named ? "ok" : ""}" data-a="tlMark" aria-label="Change mark"><span>${txt}</span></button>` : `<span class="mk ${g.named ? "ok" : ""}"><span>${txt}</span></span>`}
+      <span class="small ${g.named ? "tokens" : "faint"}">${g.named ? "+1 ★" : "no ★"}</span></div>`;
+  }
+  h += tlList(g, cur, false, { pos: g.pos, song, ok: g.ok });
+  const willWin = g.ok && (g.lines[cur] || []).length + 1 >= g.goal;
+  if (host || mine(cur)) h += `<div class="bottom">${dev ? `<div class="linkrow"><button class="link" data-a="hearMore">▶ Play the chorus</button><button class="link" data-a="fixClips">Clip sounded off?</button></div>` : ""}
+    <button class="cta" data-a="tlNext">${willWin ? "See the winner" : "Next turn"}</button></div>`;
+  else h += wait(`Next up: ${esc(nm(g.roster[(g.at + 1) % g.roster.length]))}`);
+  return h;
+}
+
+/* ---------- game over ---------- */
+function overView() {
+  const g = S.g, m = MODES[S.mode];
+  let head = "", sub = "", list = "";
+  if (g.type === "split") {
+    const ids = g.roster.slice().sort((a, b) => (g.score[b] || 0) - (g.score[a] || 0));
+    const top = ids.length ? g.score[ids[0]] || 0 : 0, winners = ids.filter(p => (g.score[p] || 0) === top);
+    head = ids.length === 1 ? `${half(top)} points` : winners.length > 1 ? "It's a tie!" : `${nm(winners[0])} wins!`;
+    sub = ids.length === 1 ? `${g.got[ids[0]] || 0} of ${g.songs} songs scored` : winners.length > 1 ? winners.map(nm).join(" & ") + ` on ${half(top)}` : `${half(top)} points from ${g.songs} songs`;
+    list = ids.map((p, i) => `<div class="slot"><span class="n">${i + 1}</span><span class="nm">${esc(nm(p))}</span><span class="val">${half(g.score[p] || 0)}</span></div>`).join("");
+  } else {
+    const ids = g.roster.slice().sort((a, b) => (g.lines[b] || []).length - (g.lines[a] || []).length || (g.tokens[b] || 0) - (g.tokens[a] || 0));
+    head = g.winner && player(g.winner) ? (g.roster.length === 1 ? "Timeline complete!" : `${nm(g.winner)} wins!`) : "Out of songs!";
+    sub = g.winner ? `${g.goal} cards in ${g.turns} turns` : "Most cards wins";
+    list = ids.map((p, i) => `<div class="slot"><span class="n">${i + 1}</span><span class="nm">${esc(nm(p))}</span><span class="val">${(g.lines[p] || []).length} 🃏</span></div>`).join("");
+  }
+  const host = isHostDevice();
+  return `<section class="screen" style="justify-content:center">
+    <div class="center"><span class="mchip">${m.name}</span></div>
+    <div class="banner good"><span class="big">${esc(head)}</span>${esc(sub)}</div>
+    <div class="stand">${list}</div>
+    <div class="bottom">
+      ${host ? `<button class="cta" data-a="again">Play ${m.name} again</button>
+                <button class="cta alt" data-a="${ROLE === "pass" ? "changeGame" : "lobby"}">${ROLE === "pass" ? "Pick another game" : "Back to the lobby"}</button>`
+             : wait(`Waiting for ${esc(nm(S.hostId))} to pick what's next`)}
+      ${ROLE === "guest" ? `<button class="link" data-a="leave">Leave room</button>` : ""}
+    </div>
+  </section>`;
+}
+
+/* ---------- sheets ---------- */
+function sheetView() {
+  const s = U.sheet; if (!s) return "";
+  let inner = "";
+  if (s.k === "rules") {
+    const k = s.mode;
+    inner = `<div class="row"><div class="display grow" style="font-size:34px;color:${MODES[k].color}">${MODES[k].name}</div></div>
+      ${rulesBlock(k)}<button class="cta" data-a="close">Got it</button>`;
+  } else if (s.k === "menu") {
+    const off = ROLE === "host" && S && S.g && S.stage === "play" ? S.g.roster.filter(p => p !== ME) : [];
+    inner = `<div class="eyebrow">Menu</div>
+      <button class="cta alt" data-a="rules">How to play ${MODES[S.mode].name}</button>
+      ${S.play === "room" ? `<button class="cta alt" data-a="share">Share invite link (${esc(S.code)})</button>` : ""}
+      ${off.length ? `<div class="eyebrow">Remove a player from this game</div><div class="chips">${off.map(p => `<button class="chip" data-a="drop" data-v="${p}">${online(p) ? "" : "⚪ "}${esc(nm(p))}</button>`).join("")}</div>` : ""}
+      ${ROLE === "pass" ? `<button class="cta alt" data-a="endPass">End game</button>` : ""}
+      ${ROLE === "host" ? `<button class="cta alt" data-a="lobby">End game, back to lobby</button><button class="cta alt" data-a="closeRoom">Close the room</button>` : ""}
+      ${ROLE === "guest" ? `<button class="cta alt" data-a="leave">Leave room</button>` : ""}
+      <button class="link" data-a="close">Close</button>`;
+  } else if (s.k === "modes") {
+    inner = `<div class="eyebrow">Pick a game</div><div class="modes">${Object.keys(MODES).map(k => modeCard(k).replace('data-a="pick"', 'data-a="setMode"')).join("")}</div>
+      <button class="link" data-a="close">Cancel</button>`;
+  } else if (s.k === "ask") {
+    inner = `<div class="q" style="font-size:22px;font-weight:800">${esc(s.text)}</div>
+      <button class="cta" data-a="${s.then}" ${s.v ? `data-v="${esc(s.v)}"` : ""}>${esc(s.yes)}</button>
+      <button class="cta alt" data-a="close">Cancel</button>`;
+  } else if (s.k === "settings") {
+    const fixes = Object.keys(store.get("earworm-times", {})).length, bad = store.get("earworm-bad", []).length;
+    inner = `<div class="display" style="font-size:30px">YouTube settings</div>
+      <div class="note">Earworm plays songs through YouTube on the phone that runs the game. A <b>YouTube Data API key</b> is optional: with one, Earworm checks each video and finds another upload when a song won't play, and it can play the songs that don't have a video saved yet.</div>
+      <div class="field"><label for="ytkey">API key</label><input class="inp" id="ytkey" autocomplete="off" spellcheck="false" placeholder="AIza…" value="${esc(U.drafts.ytkey ?? U.key)}"></div>
+      <div class="note">Saved on this phone only, never in the page. In Google Cloud, restrict the key to your website's address so nobody else can use it.</div>
+      <button class="cta" data-a="saveKey">Save</button>
+      <hr class="sep">
+      <div class="row"><span class="grow note">Clip times you've fixed: <b>${fixes}</b></span><button class="ghost" data-a="copyFixes" ${fixes ? "" : "disabled"}>Copy</button></div>
+      <div class="row"><span class="grow note">Songs that wouldn't play: <b>${bad}</b></span><button class="ghost" data-a="resetBad" ${bad ? "" : "disabled"}>Try again</button></div>
+      <button class="link" data-a="close">Close</button>`;
+  } else if (s.k === "fix") {
+    const g = S && S.g; if (!g) return "";
+    const song = curSong(g), key = curKey(g), c = clipsFor(song, key);
+    const rows = (g.type === "split" ? [0, 1, 2] : [0]).map(i => {
+      const len = g.type === "split" ? i + 1 : TL_CLIP;
+      return `<div class="fixrow"><span class="eyebrow">${len} sec</span><span class="tm">${mmss(c[i])}</span>
+        <span class="btns"><button class="ghost" data-a="nudgeClip" data-v="${i}:-5">−5</button><button class="ghost" data-a="nudgeClip" data-v="${i}:-1">−1</button>
+        <button class="ghost" data-a="nudgeClip" data-v="${i}:1">+1</button><button class="ghost" data-a="nudgeClip" data-v="${i}:5">+5</button>
+        <button class="ghost on" data-a="testClip" data-v="${i}" aria-label="Play this clip">▶</button></span></div>`;
+    }).join("");
+    inner = `<div class="display" style="font-size:28px">Fix the clips</div>
+      <div class="note">${esc(song.t)} · ${esc(song.a)}. Move where each clip starts, tap ▶ to check it, and it's saved on this phone for next time.</div>
+      ${rows}
+      <div class="row"><button class="ghost" data-a="resetClip">Reset</button><span class="grow"></span><button class="cta" data-a="close" style="width:auto;padding:14px 24px">Done</button></div>`;
+  }
+  return `<div class="sheet" data-a="scrim"><div class="in" role="dialog" aria-modal="true">${inner}</div></div>`;
+}
+
+/* ================= render ================= */
+function view() {
+  if (!S) return ({ home: homeView, mode: modeView, setup: setupView, host: hostView, join: joinView, connecting: connectingView }[U.screen] || homeView)();
+  if (S.stage === "lobby") return lobbyView();
+  if (S.stage === "over") return overView();
+  const v = { split: splitView, timeline: timelineView }[S.mode]();
+  return `<section class="screen">${v}</section>`;
+}
+let lastKey = "";
+function render() {
+  const mode = (S && S.mode) || (U.screen !== "home" && U.screen !== "join" ? U.pick : "") || "";
+  document.body.dataset.mode = mode;
+  const ae = document.activeElement;
+  const keep = ae && ae.id && ae.tagName === "INPUT" ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
+  const g = S && S.g;
+  // only animate the screen when the "page" actually changes
+  const key = S ? [S.stage, g && g.phase, g && (g.n || g.turns), g && g.qi, g && g.stage, g && g.played > 0, U.peek,
+    g && g.type === "split" && g.phase === "guess" ? Object.keys(g.ans).length + "-" + Object.keys(g.more).length : ""].join("|") : U.screen + U.pick;
+  app.innerHTML = view();
+  if (key === lastKey) app.querySelectorAll(".screen").forEach(el => el.style.animation = "none");
+  lastKey = key;
+  if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch (e) {} } }
+  layer.innerHTML = sheetView();
+  if (S && S.stage === "over" && !U.cele) { U.cele = true; confetti(); }
+  if (!S || S.stage !== "over") U.cele = false;
+  syncTune();
+}
+
+/* ================= toast + confetti ================= */
+let toastT;
+function toast(msg) {
+  const old = document.querySelector(".toast"); if (old) old.remove();
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t);
+  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600);
+}
+function confetti() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c = document.createElement("canvas"); c.className = "confetti"; document.body.appendChild(c);
+  const x = c.getContext("2d"), W = c.width = innerWidth, H = c.height = innerHeight;
+  const cols = ["#ff4f7b", "#2ee6c9", "#ffb000", "#25c281", "#9b6bff"];
+  const P = Array.from({ length: 140 }, () => ({ x: W / 2 + (Math.random() - .5) * 80, y: H * .35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4, s: 5 + Math.random() * 6, r: Math.random() * 6, c: cols[rnd(5)] }));
+  let f = 0;
+  (function tick() {
+    x.clearRect(0, 0, W, H);
+    P.forEach(p => { p.vy += .35; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += .15; x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); x.restore(); });
+    if (++f < 150) requestAnimationFrame(tick); else c.remove();
+  })();
+}
+
+/* ================= input handling ================= */
+function inviteLink() {
+  const u = new URL(location.href); u.search = ""; u.hash = "";
+  u.searchParams.set("room", S.code);
+  ["net", "peerhost"].forEach(k => { if (params.get(k)) u.searchParams.set(k, params.get(k)); });
+  return u.toString();
+}
+async function share() {
+  const url = inviteLink();
+  try {
+    if (navigator.share) { await navigator.share({ title: "Earworm", text: `Join my Earworm room: ${S.code}`, url }); return; }
+  } catch (e) { if (e && e.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(url); toast("Invite link copied"); }
+  catch (e) { prompt("Copy this link:", url); }
+}
+function addName() {
+  const n = cleanName(U.drafts.newname);
+  if (!n) return;
+  if (U.pp.some(p => p.name.toLowerCase() === n.toLowerCase())) { toast(n + " is already playing"); return; }
+  U.pp.push({ id: uid(), name: n });
+  U.drafts.newname = ""; render();
+  const el = $("#newname"); if (el) el.focus();
+}
+async function createRoom() {
+  const name = cleanName(U.drafts.hostname ?? U.name);
+  if (!name) { U.err = "Enter your name first."; render(); return; }
+  U.name = name; store.set("earworm-name", name);
+  U.err = ""; U.net = "Opening a room…"; U.screen = "connecting"; render();
+  const tok = U.conn = (U.conn || 0) + 1;
+  try {
+    const code = await hostRoom(newCode());
+    if (tok !== U.conn) { try { Net.peer.destroy(); } catch (e) {} Net.peer = null; return; }
+    ROLE = "host"; ME = uid();
+    S = { v: 0, play: "room", code, mode: U.pick, hostId: ME, stage: "lobby", sets: JSON.parse(JSON.stringify(U.sets)),
+          players: [{ id: ME, name, on: true }], g: null };
+    commit();
+  } catch (e) { if (tok !== U.conn) return; U.screen = "host"; U.err = e.message; render(); }
+}
+async function doJoin(code, name) {
+  U.err = ""; U.net = `Joining room ${code}…`; U.screen = "connecting"; render();
+  const tok = U.conn = (U.conn || 0) + 1;
+  try {
+    await joinRoom(code, name);
+    if (tok !== U.conn) { goHome(); return; }
+    ROLE = "guest"; U.screen = "home";
+    store.set("earworm-save", { role: "guest", code, mode: S && S.mode, t: Date.now() });
+    render();
+  } catch (e) { if (tok !== U.conn) return; U.screen = "join"; U.err = e.message; render(); }
+}
+async function resume() {
+  const sv = store.get("earworm-save", null); if (!sv) return;
+  if (sv.role === "pass") { ROLE = "pass"; ME = null; S = sv.S; render(); return; }
+  if (sv.role === "guest") { U.joinCode = sv.code; return doJoin(sv.code, U.name || "Player"); }
+  U.net = `Reopening room ${sv.S.code}…`; U.screen = "connecting"; render();
+  try {
+    await hostRoom(sv.S.code, true);
+    ROLE = "host"; ME = sv.me; S = sv.S;
+    S.players.forEach(p => p.on = p.id === ME);
+    commit();
+  } catch (e) { U.screen = "home"; render(); toast(e.message); }
+}
+function submitGuess(pid) {
+  const val = { a: U.drafts["g-a"] || "", t: U.drafts["g-t"] || "", y: U.drafts["g-y"] || "" };
+  if (!val.a.trim() && !val.t.trim() && !val.y.trim()) { toast("Type at least one guess, or wait for more"); return; }
+  if (val.y.trim() && !/^\d{4}$/.test(val.y.trim())) { toast("Years have 4 digits, like 1999"); return; }
+  ["g-a", "g-t", "g-y"].forEach(k => delete U.drafts[k]);
+  U.peek = false;
+  act({ type: "ssGuess", v: pid, val });
+  scrollTo(0, 0);
+}
+function setClip(i, val) {
+  const g = S.g, key = curKey(g), c = clipsFor(curSong(g), key).slice(), all = store.get("earworm-times", {});
+  const d = Tune.dur || 600;
+  c[i] = clamp(Math.round(val), 0, Math.max(0, d - 3));
+  all[key] = c; store.set("earworm-times", all); render();
+}
+
+document.addEventListener("input", e => {
+  const t = e.target; if (!t.id) return;
+  if (t.id === "joincode") t.value = t.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+  if (t.id === "g-y") t.value = t.value.replace(/\D/g, "").slice(0, 4);
+  U.drafts[t.id] = t.value;
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter" || !e.target.id) return;
+  const id = e.target.id;
+  if (id === "newname") addName();
+  else if (id === "hostname") createRoom();
+  else if (id === "joincode" || id === "joinname") handle("joinRoom");
+  else if (id === "g-a") $("#g-t") && $("#g-t").focus();
+  else if (id === "g-t") $("#g-y") && $("#g-y").focus();
+  else if (id === "g-y") { const b = document.querySelector('[data-a="ssGuess"]'); if (b) handle("ssGuess", b.dataset.v); }
+  else if (id === "tl-a") $("#tl-t") && $("#tl-t").focus();
+  else if (id === "tl-t" || id === "ytkey") e.target.blur();
+});
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-a]"); if (!el || el.disabled) return;
+  if (el.dataset.a === "scrim" && e.target !== el) return;
+  handle(el.dataset.a, el.dataset.v, el);
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && U.sheet) { U.sheet = null; render(); } });
+
+function ask(text, yes, then, v) { U.sheet = { k: "ask", text, yes, then, v }; render(); }
+function handle(a, v, el) {
+  switch (a) {
+    /* ---- local navigation ---- */
+    case "home": U.conn = (U.conn || 0) + 1; U.screen = "home"; U.err = ""; render(); scrollTo(0, 0); return;
+    case "pick": U.pick = v; U.screen = "mode"; U.err = ""; render(); scrollTo(0, 0); return;
+    case "goSetup": U.screen = "setup"; render(); scrollTo(0, 0); return;
+    case "goHost": U.screen = "host"; U.err = ""; render(); scrollTo(0, 0); return;
+    case "goJoin": U.screen = "join"; U.err = ""; render(); return;
+    case "addName": addName(); return;
+    case "rmName": U.pp = U.pp.filter(p => p.id !== v); render(); return;
+    case "startPass": {
+      const m = MODES[U.pick]; if (U.pp.length < m.min || U.pp.length > m.max) return;
+      ROLE = "pass"; ME = null;
+      S = { v: 0, play: "pass", code: null, mode: U.pick, hostId: null, stage: "lobby", sets: JSON.parse(JSON.stringify(U.sets)),
+            players: U.pp.map(p => ({ id: p.id, name: p.name, on: true })), g: null };
+      startGame(); commit(); scrollTo(0, 0); return;
+    }
+    case "createRoom": createRoom(); return;
+    case "joinRoom": {
+      const code = String(U.drafts.joincode ?? U.joinCode).toUpperCase(), name = cleanName(U.drafts.joinname ?? U.name);
+      if (code.length !== 4) { U.err = "Room codes are 4 letters."; render(); return; }
+      if (!name) { U.err = "Enter your name."; render(); return; }
+      U.joinCode = code; U.name = name; store.set("earworm-name", name);
+      doJoin(code, name); return;
+    }
+    case "resume": resume(); return;
+    case "reconnect": reconnect(false); return;
+    case "share": share(); return;
+    case "rules": U.sheet = { k: "rules", mode: (S && S.mode) || U.pick }; render(); return;
+    case "menu": U.sheet = { k: "menu" }; render(); return;
+    case "modePick": U.sheet = { k: "modes" }; render(); return;
+    case "settings": U.sheet = { k: "settings" }; render(); return;
+    case "close": case "scrim": U.sheet = null; render(); return;
+    case "peek": U.peek = true; render(); { const f = $("#g-a"); if (f) f.focus(); } return;
+    case "leave": ask("Leave this room?", "Leave", "yesLeave"); return;
+    case "closeRoom": ask("Close the room for everyone?", "Close room", "yesClose"); return;
+    case "endPass": ask("End this game?", "End game", "yesEnd"); return;
+    case "yesLeave": case "yesClose": goHome(); return;
+    case "yesEnd": { const k = S.mode; goHome(); U.pick = k; U.screen = "mode"; render(); return; }
+    case "changeGame": { goHome(); return; }
+
+    /* ---- settings ---- */
+    case "saveKey": {
+      U.key = String(U.drafts.ytkey ?? U.key).trim(); delete U.drafts.ytkey;
+      store.set("earworm-ytkey", U.key); U.sheet = null; render(); toast(U.key ? "Key saved on this phone" : "Key removed"); return;
+    }
+    case "copyFixes": {
+      const txt = JSON.stringify(store.get("earworm-times", {}), null, 1);
+      navigator.clipboard.writeText(txt).then(() => toast("Copied. Send it over to make the fixes permanent."), () => prompt("Copy this:", txt));
+      return;
+    }
+    case "resetBad": store.del("earworm-bad"); store.del("earworm-vid"); render(); toast("Those songs are back in the deck"); return;
+
+    /* ---- music (this phone only) ---- */
+    case "ssPlay": {
+      const g = S.g; if (!g || g.phase !== "guess") return;
+      if (Tune.clip(clipsFor(curSong(g), curKey(g))[g.stage - 1], g.stage)) act({ type: "ssPlayed", val: Tune.id });
+      return;
+    }
+    case "tlPlay": {
+      const g = S.g; if (!g || g.phase !== "listen") return;
+      if (Tune.clip(clipsFor(curSong(g), curKey(g))[0], TL_CLIP)) act({ type: "tlPlayed", val: Tune.id });
+      return;
+    }
+    case "hearMore": { const g = S.g; Tune.clip(clipsFor(curSong(g), curKey(g))[0], 30); return; }
+    case "tuneRetry": { const w = wantSong(); if (w) Tune.prepare(w.song, w.key); return; }
+    case "tuneSkip": { const g = S.g; if (g) act({ type: g.type === "split" ? "ssBad" : "tlBad", v: curKey(g) }); return; }
+    case "unlock": Tune.unlocked = true; return;
+    case "fixClips": U.sheet = { k: "fix" }; render(); return;
+    case "nudgeClip": { const [i, d] = v.split(":").map(Number), g = S.g; setClip(i, clipsFor(curSong(g), curKey(g))[i] + d); return; }
+    case "testClip": { const i = Number(v), g = S.g; Tune.clip(clipsFor(curSong(g), curKey(g))[i], g.type === "split" ? i + 1 : TL_CLIP); return; }
+    case "resetClip": { const all = store.get("earworm-times", {}); delete all[curKey(S.g)]; store.set("earworm-times", all); render(); return; }
+
+    /* ---- pass-mode settings before a game exists ---- */
+    case "set":
+      if (!S) {
+        const k = el.dataset.k, d = DEFAULTS[U.pick][k];
+        U.sets[U.pick][k] = typeof d === "string" ? String(v) : Number(v);
+        store.set("earworm-sets", U.sets); render(); return;
+      }
+      act({ type: "set", k: el.dataset.k, v }); return;
+
+    /* ---- game actions (go through the host) ---- */
+    case "setMode": U.sheet = null; act({ type: "setMode", v }); return;
+    case "ssGuess": submitGuess(v); return;
+    case "ssMore": ["g-a", "g-t", "g-y"].forEach(k => delete U.drafts[k]); U.peek = false; act({ type: "ssMore", v }); scrollTo(0, 0); return;
+    case "ssMark": act({ type: "ssMark", v, k: el.dataset.k }); return;
+    case "tlPlace": {
+      const val = { a: U.drafts["tl-a"] || "", t: U.drafts["tl-t"] || "" };
+      delete U.drafts["tl-a"]; delete U.drafts["tl-t"];
+      act({ type: "tlPlace", v, val }); scrollTo(0, 0); return;
+    }
+    case "drop": ask(`Remove ${nm(v)} from this game?`, "Remove", "yesDrop", v); return;
+    case "yesDrop": U.sheet = null; act({ type: "drop", v }); return;
+    case "lobby": U.sheet = null; act({ type: "lobby" }); return;
+    case "ssNext": case "tlNext":
+      U.peek = false; Tune.halt(); act({ type: a, v }); scrollTo(0, 0); return;
+    default: act({ type: a, v });
+  }
+}
+
+/* ================= boot ================= */
+// test hook: lets automated checks read state (harmless in normal play)
+window.__earworm = { get S() { return S; }, get ME() { return ME; }, get ROLE() { return ROLE; }, Tune, SONGS, matchList, autoMark, makeQueue };
+render();
+// reloaded a tab that was already in this room? slip straight back in
+if (U.joinCode && tabStore.get("earworm-pid-" + U.joinCode) && U.name) doJoin(U.joinCode, U.name);
+})();
+</script>
+</body>
+</html>
