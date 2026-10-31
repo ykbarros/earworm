@@ -9,7 +9,7 @@ Name the hit from one second of it. A phone-friendly music quiz with two games a
 
 ## Two ways to play
 - **One phone:** the phone plays the music, then gets passed round so everyone types their guess in private.
-- **Rooms:** the host taps *Start a room* and shares the 4-letter code or invite link. The host's phone plays the music, so turn it up or connect a speaker. Everyone answers on their own phone at the same time. Rooms are peer-to-peer (WebRTC via [PeerJS](https://peerjs.com/)), so there's no server to run.
+- **Rooms:** the host taps *Start a room* and shares the 4-letter code or invite link. The host's phone plays the music, so turn it up or connect a speaker. Everyone answers on their own phone at the same time. Phones can be on any mix of wifi and mobile data: room messages go through public MQTT relays over secure websockets (three at once, so one being down doesn't matter), so there's no server to run. The host's phone runs the game, so keep Earworm open on it. Anyone who drops can rejoin, and reloading a tab reconnects automatically. Room traffic passes through those public relays, so treat names and answers as public.
 
 ## Music
 Songs play through the YouTube embedded player on the host's phone (or the single phone). Before the first song, the game asks for one tap on the player, because phones won't play sound until someone taps the player itself.
@@ -23,5 +23,6 @@ A single self-contained `index.html` with no build step.
 ## Dev notes
 - Decks live at the top of the first `<script>` in `index.html`, one song per line: `Title|Artist|Year|YouTube id|clip starts`. Other accepted spellings go after `;`, and artists credited together are joined with ` + `.
 - `?yt=fake` swaps YouTube for a pretend player, for testing without sound or internet.
-- `?net=local` swaps PeerJS for a same-browser BroadcastChannel transport, so you can play a room across several tabs with no internet.
-- `?peerhost=127.0.0.1:9000` points PeerJS at a self-hosted PeerServer (`npx peer --port 9000`).
+- `?net=p2p` uses direct WebRTC links via PeerJS instead of the relays. `?relay=wss://…,wss://…` points at other MQTT-over-websocket relays.
+- `?net=local` swaps the network for a same-browser BroadcastChannel transport, so you can play a room across several tabs with no internet.
+- `?peerhost=127.0.0.1:9000` (with p2p) points PeerJS at a self-hosted PeerServer (`npx peer --port 9000`).
